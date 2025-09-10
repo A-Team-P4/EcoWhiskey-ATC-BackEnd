@@ -1,6 +1,6 @@
 # EcoWhiskey ATC Backend
 
-A FastAPI-based Air Traffic Control backend application implementing Clean Architecture principles.
+A FastAPI-based Air Traffic Control training backend where pilot students can practice communicating with an ATC simulator. The service is built with Clean Architecture principles.
 
 ## Architecture
 
@@ -11,15 +11,11 @@ app/
 ├── main.py                      # FastAPI app entry point and wiring
 ├── presentation/                # HTTP layer (routers, DTOs request/response)
 │   ├── routers/
-│   │   ├── users.py            # User management endpoints
-│   │   ├── aircraft.py         # Aircraft management endpoints
-│   │   └── flights.py          # Flight management endpoints
+│   │   └── users.py            # User management endpoints
 │   └── dtos.py                 # Data Transfer Objects
 ├── application/                 # Business logic layer
 │   ├── use_cases/              # Application use cases
-│   │   ├── user_use_cases.py
-│   │   ├── aircraft_use_cases.py
-│   │   └── flight_use_cases.py
+│   │   └── user_use_cases.py
 │   └── interfaces.py           # Abstract interfaces
 ├── domain/                     # Core business entities
 │   ├── models.py              # Domain models
@@ -100,18 +96,6 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - `PUT /users/{user_id}` - Update user
 - `DELETE /users/{user_id}` - Delete user
 
-### Aircraft Management
-- `POST /aircraft` - Create aircraft
-- `GET /aircraft/{aircraft_id}` - Get aircraft by ID
-- `GET /aircraft` - List all aircraft
-- `GET /aircraft/available/` - List available aircraft
-
-### Flight Management
-- `POST /flights` - Create flight
-- `GET /flights/{flight_id}` - Get flight by ID
-- `GET /flights` - List all flights
-- `PATCH /flights/{flight_id}/status` - Update flight status
-
 ## Configuration
 
 The application uses environment-based configuration. See `.env.example` for available options:
@@ -125,7 +109,7 @@ The application uses environment-based configuration. See `.env.example` for ava
 ## Clean Architecture Layers
 
 ### 1. Domain Layer
-- **Models**: Core business entities (User, Aircraft, Flight)
+- **Models**: Core business entities (User)
 - **Services**: Domain business rules and logic
 
 ### 2. Application Layer
