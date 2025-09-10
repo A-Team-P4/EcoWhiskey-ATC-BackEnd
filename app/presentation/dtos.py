@@ -48,3 +48,10 @@ class SuccessResponse(BaseModel):
     message: str
     data: Optional[dict] = None
 
+
+class TtsRequest(BaseModel):
+    """Request DTO for text-to-speech conversion"""
+
+    text: str
+    voice_id: Optional[str] = None
+

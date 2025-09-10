@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from .config.settings import settings
-from .presentation.routers import users
+from .presentation.routers import users, tts
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     
     # Include routers
     app.include_router(users.router)
+    app.include_router(tts.router)
     
     # Root endpoint
     @app.get("/")
