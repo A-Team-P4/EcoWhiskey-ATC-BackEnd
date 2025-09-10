@@ -2,7 +2,12 @@
 
 A FastAPI-based Air Traffic Control training backend where pilot students can practice communicating with an ATC simulator. The service is built with Clean Architecture principles.
 
-## Architecture
+## Architecture Decisions
+
+- **General**: Monolithic application.
+- **Internal**: Clean Architecture with presentation, application, domain and infrastructure layers.
+
+## Project Structure
 
 This project follows Clean Architecture patterns with clear separation of concerns:
 
@@ -163,6 +168,56 @@ The application uses environment-based configuration. See `.env.example` for ava
 - Add monitoring and logging
 - Use environment-specific configurations
 - Set up CI/CD pipelines
+
+## Diagrams
+
+The following diagrams are available in `docs/diagrams/`:
+
+- Context Diagram (C4 Level 1)
+- Component Diagram (C4 Level 2-3)
+- User Flow
+
+## Development Standards
+
+### Branch Strategy
+- `main`: stable production code
+- `develop`: integration branch
+- `feature/*`: short-lived feature branches
+
+### Commit Convention
+- [Conventional Commits](https://www.conventionalcommits.org/)
+
+### Naming
+- Classes: `PascalCase`
+- Functions/Modules: `snake_case`
+- Endpoints: RESTful and kebab-case
+
+## Linting & Formatting
+
+Install tools:
+
+```bash
+pip install flake8 flake8-bugbear flake8-import-order black isort
+```
+
+Run checks:
+
+```bash
+flake8 .
+black --check .
+isort --check-only .
+```
+
+## CI/CD
+
+GitHub Actions workflow runs lint checks on every push and pull request (`.github/workflows/ci.yml`).
+
+## Definition of Done
+
+- Code reviewed by at least one teammate.
+- Linting passes.
+- Tests (if any) pass.
+- Documentation updated.
 
 ## License
 
