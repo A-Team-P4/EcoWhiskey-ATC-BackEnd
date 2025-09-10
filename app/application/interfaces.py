@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from app.domain.models import User, Aircraft, Flight
+
+from app.domain.models import User
 
 
 class UserRepositoryInterface(ABC):
@@ -30,61 +31,6 @@ class UserRepositoryInterface(ABC):
     async def delete(self, user_id: int) -> bool:
         pass
 
-
-class AircraftRepositoryInterface(ABC):
-    """Interface for Aircraft repository"""
-    
-    @abstractmethod
-    async def create(self, aircraft: Aircraft) -> Aircraft:
-        pass
-    
-    @abstractmethod
-    async def get_by_id(self, aircraft_id: int) -> Optional[Aircraft]:
-        pass
-    
-    @abstractmethod
-    async def get_by_registration(self, registration: str) -> Optional[Aircraft]:
-        pass
-    
-    @abstractmethod
-    async def list_all(self) -> List[Aircraft]:
-        pass
-    
-    @abstractmethod
-    async def update(self, aircraft: Aircraft) -> Aircraft:
-        pass
-    
-    @abstractmethod
-    async def delete(self, aircraft_id: int) -> bool:
-        pass
-
-
-class FlightRepositoryInterface(ABC):
-    """Interface for Flight repository"""
-    
-    @abstractmethod
-    async def create(self, flight: Flight) -> Flight:
-        pass
-    
-    @abstractmethod
-    async def get_by_id(self, flight_id: int) -> Optional[Flight]:
-        pass
-    
-    @abstractmethod
-    async def get_by_flight_number(self, flight_number: str) -> Optional[Flight]:
-        pass
-    
-    @abstractmethod
-    async def list_all(self) -> List[Flight]:
-        pass
-    
-    @abstractmethod
-    async def update(self, flight: Flight) -> Flight:
-        pass
-    
-    @abstractmethod
-    async def delete(self, flight_id: int) -> bool:
-        pass
 
 
 class S3ServiceInterface(ABC):
