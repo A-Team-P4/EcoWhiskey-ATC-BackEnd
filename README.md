@@ -93,6 +93,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ### Core Endpoints
 - `GET /` - Welcome message
 - `GET /health` - Health check
+- `GET /test/health` - Test health check
 
 ### User Management
 - `POST /users` - Create user
