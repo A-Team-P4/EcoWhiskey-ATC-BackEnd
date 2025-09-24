@@ -1,12 +1,15 @@
 from typing import List, Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Text
 from datetime import datetime
 
-from app.application.interfaces import UserRepositoryInterface
-from app.domain.models import User
+from app.application.interfaces import (
+    UserRepositoryInterface,
+    HelloMessageRepositoryInterface,
+)
+from app.domain.models import User, HelloMessage
 
 
 Base = declarative_base()
@@ -24,6 +27,16 @@ class UserEntity(Base):
     status = Column(String, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class HelloMessageEntity(Base):
+    """SQLAlchemy entity for hello-world messages"""
+
+    __tablename__ = "hello_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
 class SQLAlchemyUserRepository(UserRepositoryInterface):
@@ -99,3 +112,34 @@ class SQLAlchemyUserRepository(UserRepositoryInterface):
             return True
         return False
 
+
+class SQLAlchemyHelloMessageRepository(HelloMessageRepositoryInterface):
+    """SQLAlchemy implementation for hello-world messages"""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(self, message: str) -> HelloMessage:
+        db_message = HelloMessageEntity(message=message)
+        self.session.add(db_message)
+        await self.session.commit()
+        await self.session.refresh(db_message)
+        return HelloMessage.model_validate(db_message)
+
+    async def list_recent(self, limit: int = 10) -> List[HelloMessage]:
+        from sqlalchemy import select
+
+        result = await self.session.execute(
+            select(HelloMessageEntity)
+            .order_by(HelloMessageEntity.created_at.desc())
+            .limit(limit)
+        )
+        rows = result.scalars().all()
+        return [HelloMessage.model_validate(row) for row in rows]
+
+
+async def init_models(engine: AsyncEngine) -> None:
+    """Create database tables if they do not exist"""
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

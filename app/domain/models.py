@@ -25,3 +25,13 @@ class User(BaseModel):
     class Config:
         from_attributes = True
 
+
+class HelloMessage(BaseModel):
+    """Domain model for a hello-world message"""
+
+    id: Optional[int] = None
+    message: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

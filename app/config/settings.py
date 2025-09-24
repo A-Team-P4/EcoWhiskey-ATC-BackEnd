@@ -1,6 +1,7 @@
 from typing import Optional
+from urllib.parse import quote_plus
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,17 +10,20 @@ class DatabaseConfig(BaseSettings):
     host: str = "localhost"
     port: int = 5432
     username: str = "postgres"
-    password: str = "postgres"
+    password: SecretStr = Field(default=SecretStr("postgres"))
     database: str = "ecowhiskey_atc"
 
     @property
     def url(self) -> str:
         """Get database URL"""
-        return f"postgresql+asyncpg://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
+        username = quote_plus(self.username)
+        password = quote_plus(self.password.get_secret_value())
+        return f"postgresql+asyncpg://{username}:{password}@{self.host}:{self.port}/{self.database}"
 
     model_config = SettingsConfigDict(
         env_prefix="DB_",
         env_file=".env",
+        secrets_dir=".secrets",
         case_sensitive=False,
         extra="ignore",
     )
@@ -40,21 +44,6 @@ class S3Config(BaseSettings):
     )
 
 
-class RabbitMQConfig(BaseSettings):
-    """RabbitMQ configuration"""
-    host: str = "localhost"
-    port: int = 5672
-    username: str = "guest"
-    password: str = "guest"
-
-    model_config = SettingsConfigDict(
-        env_prefix="RABBITMQ_",
-        env_file=".env",
-        case_sensitive=False,
-        extra="ignore",
-    )
-
-
 class Settings(BaseSettings):
     """Application settings"""
     app_name: str = "EcoWhiskey ATC Backend"
@@ -69,14 +58,6 @@ class Settings(BaseSettings):
     # S3
     s3: S3Config = Field(default_factory=S3Config)
 
-    # RabbitMQ
-    rabbitmq: RabbitMQConfig = Field(default_factory=RabbitMQConfig)
-    
-    # JWT Secret (for future authentication)
-    jwt_secret: str = "your-secret-key-here"
-    jwt_algorithm: str = "HS256"
-    jwt_expiration_hours: int = 24
-    
     # CORS
     cors_origins: list[str] = ["*"]
     cors_allow_credentials: bool = True

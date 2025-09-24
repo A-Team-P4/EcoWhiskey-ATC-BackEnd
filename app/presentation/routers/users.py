@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.presentation.dtos import UserCreateRequest, UserUpdateRequest, UserResponse, ErrorResponse
+from app.presentation.dtos import UserCreateRequest, UserUpdateRequest, UserResponse
 from app.application.use_cases.user_use_cases import (
     CreateUserUseCase, GetUserUseCase, ListUsersUseCase, 
     UpdateUserUseCase, DeleteUserUseCase

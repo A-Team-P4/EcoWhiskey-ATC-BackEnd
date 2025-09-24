@@ -8,4 +8,4 @@ alembic
 asyncpg
 python-dotenv
 boto3
-pika
+greenlet

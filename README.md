@@ -16,21 +16,22 @@ app/
 ├── main.py                      # FastAPI app entry point and wiring
 ├── presentation/                # HTTP layer (routers, DTOs request/response)
 │   ├── routers/
+│   │   ├── hello.py            # Example hello-world endpoints
+│   │   ├── test.py             # Lightweight diagnostics
+│   │   ├── tts.py              # Text-to-speech endpoint
 │   │   └── users.py            # User management endpoints
 │   └── dtos.py                 # Data Transfer Objects
 ├── application/                 # Business logic layer
 │   ├── use_cases/              # Application use cases
+│   │   ├── hello_use_cases.py
 │   │   └── user_use_cases.py
 │   └── interfaces.py           # Abstract interfaces
 ├── domain/                     # Core business entities
 │   ├── models.py              # Domain models
 │   └── services.py            # Domain services
-├── infrastructure/             # External concerns
-│   ├── persistence/
-│   │   └── repositories_sqlalchemy.py
-│   └── external/
-│       ├── s3_adapter.py       # AWS S3 integration
-│       └── mq_adapter.py       # Message Queue integration
+├── infrastructure/             # Persistence and integration points
+│   └── persistence/
+│       └── repositories_sqlalchemy.py
 └── config/                     # Configuration management
     ├── settings.py
     └── dependencies.py
@@ -38,15 +39,13 @@ app/
 
 ## Features
 
-- **Clean Architecture**: Clear separation between domain, application, infrastructure, and presentation layers
+- **Clean Architecture**: Clear separation between presentation, application, domain, and infrastructure layers
 - **FastAPI**: Modern, fast web framework with automatic API documentation
 - **Async/Await**: Full asynchronous support for high performance
-- **SQLAlchemy**: ORM with async support for database operations
-- **Pydantic**: Data validation and serialization
-- **AWS S3 Integration**: File storage capabilities
-- **Message Queue**: RabbitMQ integration for event-driven architecture
+- **SQLAlchemy + Pydantic**: Async persistence paired with strict validation
+- **AWS Polly**: Text-to-speech conversion via `boto3`
+- **Hello-world example**: End-to-end sample feature worth mirroring
 - **Environment Configuration**: Flexible configuration management
-- **API Documentation**: Automatic OpenAPI/Swagger documentation
 
 ## Getting Started
 
@@ -54,8 +53,7 @@ app/
 
 - Python 3.9+
 - PostgreSQL (optional, for persistence)
-- RabbitMQ (optional, for message queuing)
-- AWS S3 (optional, for file storage)
+- AWS credentials with Polly access (optional, for text-to-speech)
 
 ### Installation
 
@@ -107,10 +105,14 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 The application uses environment-based configuration. See `.env.example` for available options:
 
 - Database settings (PostgreSQL)
-- AWS S3 configuration
-- RabbitMQ configuration
-- JWT settings (for future authentication)
+- AWS configuration (Polly region and optional credentials)
 - CORS settings
+
+### Database credentials
+
+- Set `DB_HOST`, `DB_PORT`, `DB_USERNAME`, and `DB_DATABASE` in `.env` to match your PostgreSQL instance.
+- Keep the password out of `.env` in production; create a `.secrets/DB_PASSWORD` file (or equivalent secret store) containing only the password.
+- For containerized or cloud deployments, inject the password via environment variables or a secrets manager (e.g., AWS Secrets Manager) instead of committing it to the repository.
 
 ## Clean Architecture Layers
 
@@ -124,7 +126,6 @@ The application uses environment-based configuration. See `.env.example` for ava
 
 ### 3. Infrastructure Layer
 - **Repositories**: Data persistence implementations
-- **External Services**: Third-party integrations (S3, RabbitMQ)
 
 ### 4. Presentation Layer
 - **Routers**: HTTP request handling
@@ -140,9 +141,8 @@ The application uses environment-based configuration. See `.env.example` for ava
 - **AsyncPG**: PostgreSQL async driver
 
 ### External Service Dependencies
-- **Boto3**: AWS S3 integration
-- **Pika**: RabbitMQ client
-- **Alembic**: Database migrations
+- **Boto3**: AWS Polly integration
+- **Alembic**: Database migrations (optional)
 
 ## Development
 
@@ -157,14 +157,13 @@ The application uses environment-based configuration. See `.env.example` for ava
 
 1. **Domain First**: Define models and business rules in the domain layer
 2. **Application Logic**: Create use cases in the application layer
-3. **Infrastructure**: Implement repositories and external services
+3. **Infrastructure**: Implement repositories (and other integrations if required)
 4. **Presentation**: Add API endpoints and DTOs
 
 ## Production Considerations
 
 - Set up proper database with connection pooling
-- Configure message queue for event processing
-- Set up S3 bucket for file storage
+- Provide AWS credentials for Polly if the TTS endpoint is needed
 - Implement authentication and authorization
 - Add monitoring and logging
 - Use environment-specific configurations

@@ -13,12 +13,6 @@ class UserDomainService:
         return re.match(pattern, email) is not None
 
     @staticmethod
-    def can_user_access_system(user: User) -> bool:
-        """Check if user can access the system"""
-        return user.status == "active"
-
-    @staticmethod
     def generate_username(email: str) -> str:
         """Generate username from email"""
         return email.split('@')[0].lower()
-

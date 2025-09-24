@@ -35,18 +35,18 @@ class UserResponse(BaseModel):
     updated_at: datetime
 
 
-class ErrorResponse(BaseModel):
-    """Response DTO for errors"""
-
-    detail: str
-    code: Optional[str] = None
-
-
-class SuccessResponse(BaseModel):
-    """Response DTO for success messages"""
+class HelloMessageCreateRequest(BaseModel):
+    """Request DTO for hello-world message creation"""
 
     message: str
-    data: Optional[dict] = None
+
+
+class HelloMessageResponse(BaseModel):
+    """Response DTO for hello-world messages"""
+
+    id: int
+    message: str
+    created_at: datetime
 
 
 class TtsRequest(BaseModel):
@@ -54,4 +54,3 @@ class TtsRequest(BaseModel):
 
     text: str
     voice_id: Optional[str] = None
-

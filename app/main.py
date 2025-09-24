@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from .config.settings import settings
-from .presentation.routers import users, tts, test
+from .config.dependencies import init_database_models
+from .presentation.routers import users, tts, test, hello
 
 
 def create_app() -> FastAPI:
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(users.router)
     app.include_router(tts.router)
     app.include_router(test.router)
+    app.include_router(hello.router)
     
     # Root endpoint
     @app.get("/")
@@ -65,6 +67,11 @@ def create_app() -> FastAPI:
             status_code=500,
             content={"detail": "Internal server error"}
         )
+    
+    @app.on_event("startup")
+    async def startup_event():
+        """Ensure required database tables exist"""
+        await init_database_models()
     
     return app
 
