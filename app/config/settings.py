@@ -44,6 +44,28 @@ class S3Config(BaseSettings):
     )
 
 
+class SecurityConfig(BaseSettings):
+    """JWT and application security configuration."""
+
+    jwt_secret_key: SecretStr = Field(
+        default=SecretStr("change-me"),
+        validation_alias="JWT_SECRET",
+    )
+    jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
+    access_token_expires_minutes: int = Field(
+        default=60,
+        validation_alias="JWT_EXPIRATION_MINUTES",
+        ge=1,
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="",
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
 class Settings(BaseSettings):
     """Application settings"""
     app_name: str = "EcoWhiskey ATC Backend"
@@ -57,6 +79,9 @@ class Settings(BaseSettings):
 
     # S3
     s3: S3Config = Field(default_factory=S3Config)
+
+    # Security
+    security: SecurityConfig = Field(default_factory=SecurityConfig)
 
     # CORS
     cors_origins: list[str] = ["*"]

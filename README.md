@@ -39,6 +39,7 @@ app/
 - **AWS Polly integration**: Text-to-speech conversion via `boto3` with simple configuration.
 - **Hello-world sample**: `/hello` endpoints demonstrate an end-to-end create/list workflow.
 - **Environment configuration**: `.env` + `.secrets` support through typed Pydantic settings.
+- **JWT authentication**: Email/password login issues bearer tokens that guard protected routes.
 
 ## Getting Started
 
@@ -81,6 +82,9 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ## API Endpoints
 
+### Authentication
+- `POST /auth/login` - Obtain a JWT access token
+
 ### Core Endpoints
 - `GET /` - Welcome message
 - `GET /health` - Health check
@@ -88,6 +92,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ### User Management
 - `POST /users` - Create user
+- `GET /users/me` - Return the authenticated profile
 - `GET /users/{user_id}` - Get user by ID
 - `GET /users` - List all users
 - `PUT /users/{user_id}` - Update user
@@ -100,6 +105,7 @@ The application uses environment-based configuration. See `.env.example` for ava
 - Database settings (PostgreSQL)
 - AWS configuration (Polly region and optional credentials)
 - CORS settings
+- JWT signing secret, algorithm, and access token lifetime
 
 ### Database credentials
 

@@ -1,10 +1,18 @@
-"""Security helpers for password management."""
+"""Security helpers for password management and JWT handling."""
 
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timedelta, timezone
 import hashlib
+import hmac
 import os
+from typing import Optional
+
+from jose import JWTError, jwt
+from pydantic import BaseModel, ValidationError
+
+from app.config.settings import settings
 
 _SALT_BYTES = 16
 _ITERATIONS = 120_000
@@ -39,7 +47,47 @@ def verify_password(password: str, hashed: str) -> bool:
         salt,
         _ITERATIONS,
     )
-    return hashlib.compare_digest(candidate, stored)
+    return hmac.compare_digest(candidate, stored)
 
 
-__all__ = ["hash_password", "verify_password"]
+class AuthenticationError(Exception):
+    """Raised when a JWT cannot be decoded or is otherwise invalid."""
+
+
+class TokenPayload(BaseModel):
+    """Minimal payload structure embedded in JWT access tokens."""
+
+    sub: str
+    exp: datetime
+
+
+def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
+    """Generate a signed JWT access token for the provided subject."""
+
+    expires_delta = expires_delta or timedelta(
+        minutes=settings.security.access_token_expires_minutes
+    )
+    expire_at = datetime.now(timezone.utc) + expires_delta
+    to_encode = {"sub": subject, "exp": expire_at}
+    secret = settings.security.jwt_secret_key.get_secret_value()
+    return jwt.encode(to_encode, secret, algorithm=settings.security.jwt_algorithm)
+
+
+def decode_access_token(token: str) -> TokenPayload:
+    """Decode and validate a JWT access token, returning its payload."""
+
+    secret = settings.security.jwt_secret_key.get_secret_value()
+    try:
+        payload = jwt.decode(token, secret, algorithms=[settings.security.jwt_algorithm])
+        return TokenPayload.model_validate(payload)
+    except (JWTError, ValidationError) as exc:  # pragma: no cover - defensive branch
+        raise AuthenticationError("Invalid authentication token") from exc
+
+
+__all__ = [
+    "hash_password",
+    "verify_password",
+    "create_access_token",
+    "decode_access_token",
+    "AuthenticationError",
+]

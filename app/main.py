@@ -5,7 +5,7 @@ import uvicorn
 
 from .config.settings import settings
 from .database import init_models
-from .controllers import users, tts, test, hello
+from .controllers import auth, users, tts, test, hello
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     )
     
     # Include routers
+    app.include_router(auth.router)
     app.include_router(users.router)
     app.include_router(tts.router)
     app.include_router(test.router)
