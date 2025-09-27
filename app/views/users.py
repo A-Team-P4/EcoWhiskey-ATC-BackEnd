@@ -13,6 +13,7 @@ from pydantic import (
     EmailStr,
     Field,
     field_validator,
+    model_validator
 )
 
 from app.models.user import AccountType, UserStatus
@@ -40,7 +41,7 @@ class User(BaseModel):
         validation_alias=AliasChoices("accountType", "account_type"),
         serialization_alias="accountType",
     )
-    school: str
+    school: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -71,7 +72,7 @@ class UserRegistrationRequest(BaseModel):
         validation_alias=AliasChoices("accountType", "account_type"),
         serialization_alias="accountType",
     )
-    school: str = Field(..., min_length=1, max_length=100)
+    school: Optional[str] = None
 
     @field_validator("password")
     @classmethod
@@ -95,6 +96,26 @@ class UserRegistrationRequest(BaseModel):
             )
         return value.strip()
 
+    @field_validator("school")
+    @classmethod
+    def validate_school_length(cls, value: Optional[str]) -> Optional[str]:
+        """Validate school field length when provided."""
+        if value is not None and value.strip():
+            if len(value.strip()) > 100:
+                raise ValueError("School name cannot exceed 100 characters")
+            if len(value.strip()) < 1:
+                raise ValueError("School name cannot be empty when provided")
+            return value.strip()
+        return value
+
+   
+    @model_validator(mode="after")
+    def validate_school_requirement(self) -> "UserRegistrationRequest":
+        """Validate that instructors must provide a school."""
+        if self.accountType == AccountType.INSTRUCTOR:
+            if not self.school or self.school.strip() == "":
+                raise ValueError("School is required for instructor accounts")
+        return self
 
 class UserRegistrationResponse(BaseModel):
     """Response model for successful user registration."""
@@ -117,7 +138,7 @@ class UserRegistrationResponse(BaseModel):
         validation_alias=AliasChoices("accountType", "account_type"),
         serialization_alias="accountType",
     )
-    school: str
+    school: Optional[str] = None
     created_at: datetime
     message: str
 

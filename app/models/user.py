@@ -1,12 +1,8 @@
 """SQLAlchemy model for application users."""
-
 from __future__ import annotations
-
 from datetime import datetime
 from enum import Enum
-
 from sqlalchemy import Column, DateTime, Enum as SqlEnum, Integer, String
-
 from app.models.base import Base
 
 
@@ -42,13 +38,17 @@ class User(Base):
         SqlEnum(AccountType, name="account_type"),
         nullable=False,
     )
-    school = Column(String(100), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    school = Column(String(100), nullable=True) 
+    created_at = Column(
+    DateTime, 
+    nullable=False, 
+    server_default='NOW()',  # Use PostgreSQL's NOW() function
+    )
     updated_at = Column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        server_default='NOW()',  # Use PostgreSQL's NOW() function
+        onupdate=datetime.utcnow,  # Keep this for updates
     )
 
 
