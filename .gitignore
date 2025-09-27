@@ -128,7 +128,7 @@ dmypy.json
 .idea/
 *.swp
 *.swo
-CALUDE.md
+CLAUDE.md
 
 # OS
 .DS_Store
