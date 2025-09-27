@@ -1,50 +1,33 @@
 # EcoWhiskey ATC Backend — Developer Guide
 
-This guide explains how the backend is wired together, how requests flow through the layers, and how to extend the project with new database-backed endpoints. Use it alongside `README.md` when you need deeper implementation details.
+This guide explains how the MVC-style backend is wired together, how requests travel through controllers, views, and models, and how to extend the project with new database-backed endpoints. Keep it alongside `README.md` for quick reference.
 
 ## Architecture Recap
 
-The service follows a Clean Architecture layout:
-
-- **presentation** layer: FastAPI routers and DTOs that talk HTTP.
-- **application** layer: use cases orchestrating domain logic.
-- **domain** layer: entities and business rules, independent of frameworks.
-- **infrastructure** layer: SQLAlchemy repositories that talk to the database.
-- **config** layer: environment-driven configuration and dependency wiring.
+- **Controllers** (`app/controllers/`): FastAPI routers coordinate requests, interact with the database session, and return view objects.
+- **Views** (`app/views/`): Pydantic schemas validate incoming payloads and serialise outgoing responses.
+- **Models** (`app/models/`): SQLAlchemy ORM classes map Python objects to PostgreSQL tables.
+- **Shared utilities**: `app/database.py` manages the async engine/session lifecycle; `app/config/settings.py` centralises configuration via Pydantic settings.
 
 ```
-Request → Router (FastAPI) → DTO validation → Use Case → Repository → Database
+Request → Controller (FastAPI) → View validation → Model persistence → View response → JSON
 ```
 
-## Data Flow Walkthrough
+## Data Flow Walkthrough (`POST /hello`)
 
-The typical request/response sequence is illustrated below using the `POST /hello` endpoint as an example:
+1. **Controller** — `app/controllers/hello.py` receives the request, depends on `get_session()` from `app/database.py`, and instantiates a `HelloMessage` model.
+2. **Model** — `app/models/hello.py` defines the SQLAlchemy table; the controller adds an instance and commits the async session.
+3. **View** — `HelloMessageRead` in `app/views/hello.py` converts the SQLAlchemy object into a JSON-friendly payload returned to the client.
 
-1. **FastAPI router** (`app/presentation/routers/hello.py`)
-   - Validates the payload with `HelloMessageCreateRequest` and injects an async DB session via `get_database_session`.
-2. **Use case** (`app/application/use_cases/hello_use_cases.py`)
-   - `CreateHelloMessageUseCase` receives the business input and calls the repository.
-3. **Repository** (`SQLAlchemyHelloMessageRepository` in `app/infrastructure/persistence/repositories_sqlalchemy.py`)
-   - Persists the record using SQLAlchemy, returning a domain `HelloMessage`.
-4. **Domain model** (`app/domain/models.py`)
-   - Ensures data crossing boundaries uses well-defined entities (`HelloMessage`).
-5. **DTO response** (`HelloMessageResponse`)
-   - Serializes the domain model back to JSON for the caller.
-
-Failures are raised as exceptions at any layer; routers translate them into HTTP responses (e.g., `HTTPException`).
+Errors bubble up as exceptions; controllers catch and translate them into `HTTPException` responses where appropriate.
 
 ## Database Connectivity
 
-Configuration is centralized in `app/config/settings.py` using Pydantic settings:
-
-- Set host, port, username, and database name in `.env` (prefixed `DB_`).
-- Place sensitive secrets (e.g., `DB_PASSWORD`) in `.secrets/DB_PASSWORD` or inject them via environment variables in production. The file is ignored by Git.
-- The async SQLAlchemy engine is created in `app/config/dependencies.py`, which also exposes `get_database_session`.
-- `app/main.py` registers a FastAPI startup hook that calls `init_database_models()`, ensuring all SQLAlchemy metadata (including `hello_messages`) is present. You may skip this if you manage migrations with Alembic; just remove or replace the hook.
+- Configure credentials in `.env` (`DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_DATABASE`). Keep secrets like `DB_PASSWORD` in `.secrets/DB_PASSWORD` or inject them via environment variables in production.
+- `app/database.py` builds the async SQLAlchemy engine and session factory using `settings.database.url`.
+- The FastAPI startup hook in `app/main.py` calls `init_models()` so tables defined in `app/models/` are created automatically during development (swap for migrations such as Alembic in production).
 
 ### Manual schema creation
-
-The generated SQL for the hello-world table is:
 
 ```sql
 CREATE TABLE IF NOT EXISTS hello_messages (
@@ -54,63 +37,33 @@ CREATE TABLE IF NOT EXISTS hello_messages (
 );
 ```
 
-Run it via `psql` if you prefer explicit migrations.
+Run via `psql` if you prefer explicit DDL execution.
 
-## Adding a New Endpoint
+## Adding a New Endpoint (MVC Checklist)
 
-Use the checklist below to add a feature that reads/writes to the database:
-
-1. **Domain** (`app/domain/`)
-   - Define or update domain models to represent the new entity.
-
-2. **Interfaces** (`app/application/interfaces.py`)
-   - Add an abstract repository interface describing required persistence operations.
-
-3. **Use cases** (`app/application/use_cases/`)
-   - Implement one or more use case classes that depend only on interfaces.
-
-4. **Infrastructure repository** (`app/infrastructure/persistence/`)
-   - Extend `repositories_sqlalchemy.py` (or add a new module) with SQLAlchemy models inheriting from `Base`.
-   - Implement the concrete repository that satisfies the interface and returns domain models.
-
-5. **DTOs** (`app/presentation/dtos.py`)
-   - Create request/response schemas for FastAPI validation and serialization.
-
-6. **Router** (`app/presentation/routers/`)
-   - Build a router module that constructs the repository + use case inside each endpoint handler.
-   - Inject `AsyncSession` using `Depends(get_database_session)`.
-
-7. **Wire it up** (`app/main.py`)
-   - Import and register the new router with `app.include_router(...)`.
-
-8. **Database migrations**
-   - If new tables/columns are required, update SQLAlchemy entities and run migrations (or rely on `init_models` in dev setups).
-
-9. **Tests (recommended)**
-   - Add tests targeting use cases and routers with mocked repositories or a test database.
+1. **Model** — Define or update a SQLAlchemy model in `app/models/` (remember to import it in `app/models/__init__.py` if new).
+2. **View** — Create request/response Pydantic models in `app/views/`.
+3. **Controller** — Add FastAPI routes in `app/controllers/`, injecting an `AsyncSession` with `Depends(get_session)` from `app/database.py`.
+4. **Wire-up** — Register the router in `app/main.py` using `app.include_router(...)`.
+5. **Schema management** — For development the startup hook creates tables; for production prefer migrations.
+6. **Tests (recommended)** — Test controllers with the FastAPI test client and a transactional database fixture.
 
 ## File Reference
 
-Below is a quick map of the key files and what they do:
-
-- `app/main.py` — Creates the FastAPI app, registers routers/middleware, and ensures DB metadata exists on startup.
-- `app/config/settings.py` — Pydantic settings for environment configuration (database, AWS Polly, CORS).
-- `app/config/dependencies.py` — Builds the async SQLAlchemy engine, session factory, and exposes helpers (`get_database_session`, `init_database_models`).
-- `app/domain/models.py` — Domain entities (`User`, `HelloMessage`, etc.) that represent core business objects.
-- `app/application/interfaces.py` — Abstract interfaces for repositories (users, hello messages).
-- `app/application/use_cases/` — Business workflows such as `CreateUserUseCase` and `CreateHelloMessageUseCase`.
-- `app/infrastructure/persistence/repositories_sqlalchemy.py` — SQLAlchemy ORM models plus concrete repository implementations and metadata initialization.
-- `app/presentation/dtos.py` — Request/response schemas shared across routers.
-- `app/presentation/routers/` — FastAPI routers for HTTP endpoints (`users`, `hello`, `tts`, `test`).
-- `run.py` or `uvicorn` command — Entry point for local development (`uvicorn app.main:app --reload`).
-- `.env` / `.secrets/` — Environment configuration and sensitive credentials (ignored by Git).
+- `app/main.py` — Configures FastAPI, middleware, startup tasks, and router registration.
+- `app/database.py` — Async SQLAlchemy engine/session factory and `init_models()` helper.
+- `app/config/settings.py` — Pydantic settings for app metadata, database, S3/Polly, and CORS.
+- `app/controllers/*.py` — Route handlers (users, hello, tts, test) acting as controllers.
+- `app/views/*.py` — Pydantic schemas used for validation and serialisation.
+- `app/models/*.py` — SQLAlchemy ORM models representing database tables.
+- `.secrets/` & `.env` — Environment configuration and sensitive credentials (ignored by Git).
 
 ## Tips & Conventions
 
-- Keep business rules inside the domain and application layers; routers should stay thin.
-- Sanitize/validate external input using DTOs before it reaches use cases.
-- Return domain models from repositories and transform them into DTOs at the presentation layer.
-- For production, manage schema changes with Alembic migrations instead of relying solely on `init_models`.
-- Prefer dependency injection through FastAPI `Depends` for sessions and service objects; it keeps handlers easy to test.
+- Keep controllers thin: validate/serialise with views and delegate persistence to SQLAlchemy models.
+- Prefer `UserRead.model_validate(db_user)` (Pydantic v2) to transform ORM objects into responses.
+- When adding models, ensure they are imported somewhere under `app/models/__init__.py` so metadata loads before `init_models()` is called.
+- For production deployments, disable the automatic table creation and manage schema changes through migrations.
+- Reuse the shared async session dependency to keep database access consistent and testable.
 
-Have questions? Start by inspecting the `hello` router alongside this guide—it is the smallest end-to-end example of the recommended flow.
+Need inspiration? The `/hello` controller is the smallest end-to-end example covering model creation, persistence, and view responses in this MVC setup.

@@ -4,8 +4,8 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from .config.settings import settings
-from .config.dependencies import init_database_models
-from .presentation.routers import users, tts, test, hello
+from .database import init_models
+from .controllers import users, tts, test, hello
 
 
 def create_app() -> FastAPI:
@@ -15,7 +15,7 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=settings.app_version,
         debug=settings.debug,
-        description="EcoWhiskey Air Traffic Control Backend API with Clean Architecture"
+        description="EcoWhiskey Air Traffic Control Backend API"
     )
     
     # CORS middleware
@@ -71,7 +71,7 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_event():
         """Ensure required database tables exist"""
-        await init_database_models()
+        await init_models()
     
     return app
 

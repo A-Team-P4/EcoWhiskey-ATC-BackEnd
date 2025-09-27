@@ -1,51 +1,44 @@
 # EcoWhiskey ATC Backend
 
-A FastAPI-based Air Traffic Control training backend where pilot students can practice communicating with an ATC simulator. The service is built with Clean Architecture principles.
+A FastAPI-based Air Traffic Control training backend where pilot students can practise communicating with an ATC simulator. The project is organised with a lightweight MVC-style structure to keep the learning curve gentle.
 
 ## Architecture Decisions
 
 - **General**: Monolithic application.
-- **Internal**: Clean Architecture with presentation, application, domain and infrastructure layers.
+- **Internal**: Basic MVC (controllers ↔ views ↔ models) with shared configuration utilities.
 
 ## Project Structure
 
-This project follows Clean Architecture patterns with clear separation of concerns:
-
 ```
 app/
-├── main.py                      # FastAPI app entry point and wiring
-├── presentation/                # HTTP layer (routers, DTOs request/response)
-│   ├── routers/
-│   │   ├── hello.py            # Example hello-world endpoints
-│   │   ├── test.py             # Lightweight diagnostics
-│   │   ├── tts.py              # Text-to-speech endpoint
-│   │   └── users.py            # User management endpoints
-│   └── dtos.py                 # Data Transfer Objects
-├── application/                 # Business logic layer
-│   ├── use_cases/              # Application use cases
-│   │   ├── hello_use_cases.py
-│   │   └── user_use_cases.py
-│   └── interfaces.py           # Abstract interfaces
-├── domain/                     # Core business entities
-│   ├── models.py              # Domain models
-│   └── services.py            # Domain services
-├── infrastructure/             # Persistence and integration points
-│   └── persistence/
-│       └── repositories_sqlalchemy.py
-└── config/                     # Configuration management
-    ├── settings.py
-    └── dependencies.py
+├── main.py                 # FastAPI app configuration and router wiring
+├── database.py             # Async SQLAlchemy engine, session factory, metadata init
+├── config/
+│   └── settings.py        # Environment-driven configuration (Pydantic)
+├── controllers/           # FastAPI routers acting as controllers
+│   ├── hello.py
+│   ├── test.py
+│   ├── tts.py
+│   └── users.py
+├── models/                # SQLAlchemy models (data layer)
+│   ├── __init__.py
+│   ├── hello.py
+│   └── user.py
+└── views/                 # Pydantic schemas returned by controllers (view layer)
+    ├── __init__.py
+    ├── common.py
+    ├── hello.py
+    ├── tts.py
+    └── users.py
 ```
 
 ## Features
 
-- **Clean Architecture**: Clear separation between presentation, application, domain, and infrastructure layers
-- **FastAPI**: Modern, fast web framework with automatic API documentation
-- **Async/Await**: Full asynchronous support for high performance
-- **SQLAlchemy + Pydantic**: Async persistence paired with strict validation
-- **AWS Polly**: Text-to-speech conversion via `boto3`
-- **Hello-world example**: End-to-end sample feature worth mirroring
-- **Environment Configuration**: Flexible configuration management
+- **MVC layout**: Controllers manage routing, models handle persistence, and views (Pydantic schemas) shape the payloads.
+- **FastAPI + Async SQLAlchemy**: High-performance async stack with idiomatic dependency injection.
+- **AWS Polly integration**: Text-to-speech conversion via `boto3` with simple configuration.
+- **Hello-world sample**: `/hello` endpoints demonstrate an end-to-end create/list workflow.
+- **Environment configuration**: `.env` + `.secrets` support through typed Pydantic settings.
 
 ## Getting Started
 
@@ -114,22 +107,12 @@ The application uses environment-based configuration. See `.env.example` for ava
 - Keep the password out of `.env` in production; create a `.secrets/DB_PASSWORD` file (or equivalent secret store) containing only the password.
 - For containerized or cloud deployments, inject the password via environment variables or a secrets manager (e.g., AWS Secrets Manager) instead of committing it to the repository.
 
-## Clean Architecture Layers
+## MVC Request Flow
 
-### 1. Domain Layer
-- **Models**: Core business entities (User)
-- **Services**: Domain business rules and logic
-
-### 2. Application Layer
-- **Use Cases**: Application-specific business rules
-- **Interfaces**: Abstract contracts for external dependencies
-
-### 3. Infrastructure Layer
-- **Repositories**: Data persistence implementations
-
-### 4. Presentation Layer
-- **Routers**: HTTP request handling
-- **DTOs**: Request/Response data structures
+1. **Controller** — FastAPI routers in `app/controllers/` receive the HTTP request, validate inputs, and obtain an async database session via `app/database.py`.
+2. **View** — Pydantic schemas in `app/views/` validate inbound payloads and transform SQLAlchemy model instances into JSON-safe responses.
+3. **Model** — SQLAlchemy models in `app/models/` persist or fetch data using the shared async session.
+4. **Response** — Controllers return view objects, and FastAPI serialises them as the HTTP response.
 
 ## Dependencies
 
@@ -146,19 +129,12 @@ The application uses environment-based configuration. See `.env.example` for ava
 
 ## Development
 
-### Project Structure Benefits
+### Adding New Features (MVC)
 
-1. **Dependency Inversion**: Core business logic doesn't depend on external frameworks
-2. **Testability**: Each layer can be tested independently
-3. **Maintainability**: Clear boundaries and responsibilities
-4. **Flexibility**: Easy to swap implementations (e.g., different databases)
-
-### Adding New Features
-
-1. **Domain First**: Define models and business rules in the domain layer
-2. **Application Logic**: Create use cases in the application layer
-3. **Infrastructure**: Implement repositories (and other integrations if required)
-4. **Presentation**: Add API endpoints and DTOs
+1. **Model** — Define or update SQLAlchemy models in `app/models/`.
+2. **View** — Create Pydantic request/response schemas in `app/views/`.
+3. **Controller** — Add FastAPI routes in `app/controllers/`, injecting the async session with `Depends(get_session)`.
+4. **Wire-up** — Register the new router in `app/main.py`.
 
 ## Production Considerations
 
