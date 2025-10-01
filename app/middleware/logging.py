@@ -136,7 +136,7 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                         token_user = getattr(token_payload, "user", None)
                         if token_user:
                             if hasattr(token_user, "model_dump"):
-                                user_obj = token_user.model_dump()  # type: ignore[attr-defined]
+                                user_obj = token_user.model_dump()
                             else:
                                 user_obj = token_user
                         elif getattr(token_payload, "sub", None):

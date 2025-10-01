@@ -23,5 +23,5 @@ class RequestLog(Base):
     duration_ms = Column(Integer, nullable=True)
     user = Column(JSON, nullable=True)
 
-__all__ = ["RequestLog"]
 
+__all__ = ["RequestLog"]
