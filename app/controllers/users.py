@@ -113,6 +113,7 @@ async def list_users(
 ) -> List[UserResponse]:
     result = await session.execute(select(UserModel))
     users = result.scalars().all()
+    print(_current_user)
     return [
         UserResponse(
             id=user.id,
