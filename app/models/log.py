@@ -25,4 +25,3 @@ class RequestLog(Base):
 
 
 __all__ = ["RequestLog"]
-
