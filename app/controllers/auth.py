@@ -32,7 +32,14 @@ async def login(
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    access_token = create_access_token(subject=str(user.id))
+    access_token = create_access_token(subject=str(user.id), user=user)
     expires_in = settings.security.access_token_expires_minutes * 60
+    full_name = f"{user.first_name} {user.last_name}".strip()
 
-    return TokenResponse(access_token=access_token, expires_in=expires_in)
+    return TokenResponse(
+        access_token=access_token,
+        expires_in=expires_in,
+        account_type=user.account_type.value,
+        name=full_name,
+        school=user.school,
+    )

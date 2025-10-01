@@ -22,6 +22,9 @@ class TokenResponse(BaseModel):
         serialization_alias="expiresIn",
         description="Seconds until the token expires",
     )
+    account_type: str = Field(serialization_alias="accountType")
+    name: str = Field(serialization_alias="name")
+    school: str | None = Field(default=None, serialization_alias="school")
 
 
 __all__ = ["LoginRequest", "TokenResponse"]
