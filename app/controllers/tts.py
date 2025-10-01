@@ -8,7 +8,6 @@ from fastapi.responses import Response
 from app.config.settings import settings
 from app.views import TextToSpeechRequest
 
-
 router = APIRouter(prefix="/tts", tags=["tts"])
 
 polly_client = boto3.client("polly", region_name=settings.s3.region)
@@ -28,7 +27,9 @@ async def text_to_speech(request: TextToSpeechRequest) -> Response:
         )
         audio_stream = result.get("AudioStream")
         if audio_stream is None:
-            raise HTTPException(status_code=500, detail="Polly returned no audio stream")
+            raise HTTPException(
+                status_code=500, detail="Polly returned no audio stream"
+            )
         audio_bytes = audio_stream.read()
     except (BotoCoreError, ClientError) as exc:  # pragma: no cover - network call
         raise HTTPException(status_code=500, detail=str(exc)) from exc

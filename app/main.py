@@ -1,23 +1,23 @@
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import uvicorn
 
 from .config.settings import settings
+from .controllers import hello, test, tts, users
 from .database import init_models
-from .controllers import users, tts, test, hello
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application"""
-    
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
         debug=settings.debug,
-        description="EcoWhiskey Air Traffic Control Backend API"
+        description="EcoWhiskey Air Traffic Control Backend API",
     )
-    
+
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -26,13 +26,13 @@ def create_app() -> FastAPI:
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
-    
+
     # Include routers
     app.include_router(users.router)
     app.include_router(tts.router)
     app.include_router(test.router)
     app.include_router(hello.router)
-    
+
     # Root endpoint
     @app.get("/")
     async def root():
@@ -40,9 +40,9 @@ def create_app() -> FastAPI:
         return {
             "message": f"Welcome to {settings.app_name}",
             "version": settings.app_version,
-            "status": "operational"
+            "status": "operational",
         }
-    
+
     # Health check endpoint
     @app.get("/health")
     async def health_check():
@@ -50,29 +50,25 @@ def create_app() -> FastAPI:
         return {
             "status": "healthy",
             "service": settings.app_name,
-            "version": settings.app_version
+            "version": settings.app_version,
         }
-    
+
     # Global exception handler
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request, exc):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"detail": exc.detail}
-        )
-    
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
     @app.exception_handler(Exception)
     async def general_exception_handler(request, exc):
         return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"}
+            status_code=500, content={"detail": "Internal server error"}
         )
-    
+
     @app.on_event("startup")
     async def startup_event():
         """Ensure required database tables exist"""
         await init_models()
-    
+
     return app
 
 
@@ -82,8 +78,5 @@ app = create_app()
 
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug
+        "main:app", host=settings.host, port=settings.port, reload=settings.debug
     )

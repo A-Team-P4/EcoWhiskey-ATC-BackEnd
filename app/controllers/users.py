@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
@@ -18,14 +18,17 @@ from app.views import (
     UserUpdateRequest,
 )
 
-
 router = APIRouter(prefix="/users", tags=["users"])
 
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
-@router.post("/", response_model=UserRegistrationResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/", response_model=UserRegistrationResponse, status_code=status.HTTP_201_CREATED
+)
 async def register_user(
     payload: UserRegistrationRequest,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> UserRegistrationResponse:
     result = await session.execute(
         select(UserModel).where(UserModel.email == payload.email)
@@ -67,14 +70,14 @@ async def register_user(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: int,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> UserResponse:
-    result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
-    )
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     return UserResponse(
         id=db_user.id,
@@ -90,7 +93,7 @@ async def get_user(
 
 @router.get("/", response_model=List[UserResponse])
 async def list_users(
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> List[UserResponse]:
     result = await session.execute(select(UserModel))
     users = result.scalars().all()
@@ -113,14 +116,14 @@ async def list_users(
 async def update_user(
     user_id: int,
     payload: UserUpdateRequest,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> UserResponse:
-    result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
-    )
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     if payload.firstName is not None:
         db_user.first_name = payload.firstName
@@ -153,14 +156,14 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: int,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> Response:
-    result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
-    )
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     await session.delete(db_user)
     await session.commit()

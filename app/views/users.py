@@ -13,7 +13,7 @@ from pydantic import (
     EmailStr,
     Field,
     field_validator,
-    model_validator
+    model_validator,
 )
 
 from app.models.user import AccountType, UserStatus
@@ -108,7 +108,6 @@ class UserRegistrationRequest(BaseModel):
             return value.strip()
         return value
 
-   
     @model_validator(mode="after")
     def validate_school_requirement(self) -> "UserRegistrationRequest":
         """Validate that instructors must provide a school."""
@@ -116,6 +115,7 @@ class UserRegistrationRequest(BaseModel):
             if not self.school or self.school.strip() == "":
                 raise ValueError("School is required for instructor accounts")
         return self
+
 
 class UserRegistrationResponse(BaseModel):
     """Response model for successful user registration."""

@@ -1,5 +1,5 @@
 """FastAPI routers acting as controllers in the MVC architecture."""
 
-from . import users, hello, tts, test
+from . import hello, test, tts, users
 
 __all__ = ["users", "hello", "tts", "test"]
