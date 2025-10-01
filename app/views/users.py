@@ -166,7 +166,7 @@ class UserResponse(BaseModel):
         validation_alias=AliasChoices("accountType", "account_type"),
         serialization_alias="accountType",
     )
-    school: str
+    school: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

@@ -6,6 +6,8 @@ from fastapi.responses import JSONResponse
 from .config.settings import settings
 from .controllers import hello, test, tts, users
 from .database import init_models
+from .controllers import auth, users, tts, test, hello
+
 
 
 def create_app() -> FastAPI:
@@ -28,6 +30,7 @@ def create_app() -> FastAPI:
     )
 
     # Include routers
+    app.include_router(auth.router)
     app.include_router(users.router)
     app.include_router(tts.router)
     app.include_router(test.router)
