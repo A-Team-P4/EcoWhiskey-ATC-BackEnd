@@ -1,15 +1,35 @@
+import logging
+import sys
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from .middleware import StructuredLoggingMiddleware
 
 from .config.settings import settings
 from .controllers import auth, hello, test, tts, users
 from .database import init_models
 
 
+def _configure_logging():
+    """
+    Ensure 'app.middleware.structured' logs go to stdout.
+    Your middleware already emits compact JSON strings,
+    so we keep a plain '%(message)s' formatter.
+    """
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter("%(message)s"))
+
+    lg = logging.getLogger("app.middleware.structured")
+    lg.setLevel(logging.INFO)
+    lg.handlers.clear()
+    lg.addHandler(handler)
+    lg.propagate = False  # evita duplicados si el root también tiene handlers
+
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application"""
+    _configure_logging()
 
     app = FastAPI(
         title=settings.app_name,
@@ -17,6 +37,8 @@ def create_app() -> FastAPI:
         debug=settings.debug,
         description="EcoWhiskey Air Traffic Control Backend API",
     )
+
+    app.add_middleware(StructuredLoggingMiddleware)
 
     # CORS middleware
     app.add_middleware(
@@ -32,7 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(users.router)
     app.include_router(tts.router)
     app.include_router(test.router)
-    app.include_router(hello.router)
+
 
     # Root endpoint
     @app.get("/")

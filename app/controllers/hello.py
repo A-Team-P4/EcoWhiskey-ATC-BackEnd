@@ -14,7 +14,7 @@ router = APIRouter(prefix="/hello", tags=["hello"])
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-LimitQuery = Annotated[int, Query(default=10, ge=1, le=100)]
+LimitQuery = Annotated[int, Query(ge=1, le=100)]
 
 
 @router.post("/", response_model=HelloMessageRead, status_code=status.HTTP_201_CREATED)
@@ -31,8 +31,8 @@ async def create_hello_message(
 
 @router.get("/", response_model=List[HelloMessageRead])
 async def list_hello_messages(
-    limit: LimitQuery,
     session: SessionDep,
+    limit: LimitQuery = 10,
 ) -> List[HelloMessageRead]:
     result = await session.execute(
         select(HelloMessageModel)
@@ -43,3 +43,5 @@ async def list_hello_messages(
     if not messages:
         return []
     return [HelloMessageRead.model_validate(row) for row in messages]
+
+

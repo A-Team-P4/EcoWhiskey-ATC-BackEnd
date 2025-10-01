@@ -2,6 +2,7 @@
 
 from .base import Base
 from .hello import HelloMessage  # noqa: F401
+from .log import RequestLog  # noqa: F401
 from .user import User  # noqa: F401
 
-__all__ = ["Base", "User", "HelloMessage"]
+__all__ = ["Base", "User", "HelloMessage", "RequestLog"]

@@ -14,6 +14,7 @@ from app.config.settings import settings
 # Import models so they are attached to Base.metadata before table creation
 from app.models import Base  # noqa: F401 - ensures metadata is registered
 from app.models import hello  # noqa: F401
+from app.models import log  # noqa: F401
 from app.models import user  # noqa: F401
 
 engine: AsyncEngine = create_async_engine(
@@ -41,3 +42,5 @@ async def init_models() -> None:
 
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+
+
