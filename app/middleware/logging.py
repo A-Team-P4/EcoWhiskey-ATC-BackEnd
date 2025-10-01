@@ -14,11 +14,11 @@ from starlette.responses import Response
 
 logger = logging.getLogger("app.middleware.structured")
 
-COLOR_RESET = "[0m"
-COLOR_GREEN = "[32m"
-COLOR_CYAN = "[36m"
-COLOR_YELLOW = "[33m"
-COLOR_RED = "[31m"
+COLOR_RESET = "\u001b[0m"
+COLOR_GREEN = "\u001b[32m"
+COLOR_CYAN = "\u001b[36m"
+COLOR_YELLOW = "\u001b[33m"
+COLOR_RED = "\u001b[31m"
 
 
 class StructuredLoggingMiddleware(BaseHTTPMiddleware):
@@ -43,24 +43,24 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_next(request)
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover - defensive
             log_payload["status_code"] = 500
-            log_payload["duration_ms"] = round(
-                (time.perf_counter() - start_time) * 1000,
-                2,
-            )
+            log_payload["duration_ms"] = self._elapsed_ms(start_time)
             log_payload["error"] = repr(exc)
             logger.exception(self._format_console_message(log_payload))
             raise
 
         log_payload["status_code"] = response.status_code
-        log_payload["duration_ms"] = round(
-            (time.perf_counter() - start_time) * 1000,
-            2,
-        )
+        log_payload["duration_ms"] = self._elapsed_ms(start_time)
         logger.info(self._format_console_message(log_payload))
         await self._persist_log(log_payload)
         return response
+
+    @staticmethod
+    def _elapsed_ms(start_time: float) -> float:
+        """Return elapsed milliseconds rounded to two decimals."""
+
+        return round((time.perf_counter() - start_time) * 1000, 2)
 
     async def _persist_log(self, payload: dict[str, Any]) -> None:
         """Persist the request log entry without blocking the response."""
@@ -68,13 +68,15 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
         try:
             from app.database import SessionFactory
             from app.models.log import RequestLog
-        except Exception:
+        except Exception:  # pragma: no cover - defensive
             logger.exception("Failed to import logging dependencies")
             return
 
         timestamp_value = datetime.fromisoformat(payload["timestamp"])
         if timestamp_value.tzinfo is not None:
-            timestamp_value = timestamp_value.astimezone(timezone.utc).replace(tzinfo=None)
+            timestamp_value = (
+                timestamp_value.astimezone(timezone.utc).replace(tzinfo=None)
+            )
 
         async with SessionFactory() as session:
             log_entry = RequestLog(
@@ -83,16 +85,29 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                 url=payload.get("url"),
                 status_code=payload.get("status_code", 0),
                 client_ip=payload.get("client_ip"),
-                duration_ms=int(payload.get("duration_ms", 0)) if payload.get("duration_ms") is not None else None,
+                duration_ms=self._safe_duration(payload.get("duration_ms")),
                 user=payload.get("user"),
             )
 
             session.add(log_entry)
             try:
                 await session.commit()
-            except Exception:
+            except Exception:  # pragma: no cover - defensive
                 await session.rollback()
                 logger.exception("Failed to persist request log entry")
+
+    @staticmethod
+    def _safe_duration(value: Any) -> int | None:
+        """Convert a duration payload value into an integer safely."""
+
+        if value is None:
+            return None
+
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            logger.debug("Invalid duration in log payload", extra={"value": value})
+            return None
 
     @staticmethod
     def _extract_user(request: Request) -> dict[str, Any] | None:
@@ -105,7 +120,7 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
 
         if user_obj is None and hasattr(request.state, "user"):
             try:
-                user_obj = getattr(request.state, "user")
+                user_obj = request.state.user  # type: ignore[attr-defined]
             except AttributeError:
                 user_obj = None
 
@@ -126,8 +141,11 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                                 user_obj = token_user
                         elif getattr(token_payload, "sub", None):
                             user_obj = {"id": token_payload.sub}
-                    except Exception:
-                        logger.debug("Failed to decode access token for logging", exc_info=True)
+                    except Exception:  # pragma: no cover - defensive
+                        logger.debug(
+                            "Failed to decode access token for logging",
+                            exc_info=True,
+                        )
 
         if user_obj is None:
             return None
@@ -157,7 +175,6 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
 
         return user_payload or {"repr": repr(user_obj)}
 
-
     @staticmethod
     def _format_console_message(payload: dict[str, Any]) -> str:
         """Return JSON log payload wrapped with ANSI color codes."""
@@ -172,11 +189,11 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
         else:
             color = COLOR_CYAN
 
-        return f"{color}{StructuredLoggingMiddleware._to_json(payload)}{COLOR_RESET}"
+        json_payload = StructuredLoggingMiddleware._to_json(payload)
+        return f"{color}{json_payload}{COLOR_RESET}"
 
     @staticmethod
     def _to_json(payload: dict[str, Any]) -> str:
         """Serialize payload as compact JSON."""
 
         return json.dumps(payload, default=str, separators=(",", ":"))
-

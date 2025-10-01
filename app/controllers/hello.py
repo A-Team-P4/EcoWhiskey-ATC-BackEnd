@@ -43,5 +43,3 @@ async def list_hello_messages(
     if not messages:
         return []
     return [HelloMessageRead.model_validate(row) for row in messages]
-
-
