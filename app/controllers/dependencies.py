@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
@@ -11,13 +13,13 @@ from app.database import get_session
 from app.models.user import User as UserModel
 from app.utils import AuthenticationError, decode_access_token
 
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    session: AsyncSession = Depends(get_session),
+    token: Annotated[str, Depends(oauth2_scheme)],
+    session: SessionDep,
 ) -> UserModel:
     """Resolve and validate the user referenced by the bearer token."""
 
@@ -30,9 +32,7 @@ async def get_current_user(
             detail="Could not validate credentials",
         ) from None
 
-    result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
-    )
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(
@@ -43,4 +43,7 @@ async def get_current_user(
     return user
 
 
-__all__ = ["get_current_user", "oauth2_scheme"]
+CurrentUserDep = Annotated[UserModel, Depends(get_current_user)]
+
+
+__all__ = ["get_current_user", "oauth2_scheme", "SessionDep", "CurrentUserDep"]

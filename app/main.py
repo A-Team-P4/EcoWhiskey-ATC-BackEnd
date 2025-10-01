@@ -4,10 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config.settings import settings
-from .controllers import hello, test, tts, users
+from .controllers import auth, hello, test, tts, users
 from .database import init_models
-from .controllers import auth, users, tts, test, hello
-
 
 
 def create_app() -> FastAPI:

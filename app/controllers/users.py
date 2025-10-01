@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List
+from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.controllers.dependencies import get_current_user
-from app.database import get_session
+from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.user import User as UserModel
 from app.utils import hash_password
 from app.views import (
@@ -20,8 +18,6 @@ from app.views import (
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.post(
@@ -70,7 +66,7 @@ async def register_user(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
-    current_user: UserModel = Depends(get_current_user),
+    current_user: CurrentUserDep,
 ) -> UserResponse:
     return UserResponse(
         id=current_user.id,
@@ -87,8 +83,8 @@ async def get_current_user_profile(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: int,
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> UserResponse:
     result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
@@ -111,8 +107,8 @@ async def get_user(
 
 @router.get("/", response_model=List[UserResponse])
 async def list_users(
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> List[UserResponse]:
     result = await session.execute(select(UserModel))
     users = result.scalars().all()
@@ -135,8 +131,8 @@ async def list_users(
 async def update_user(
     user_id: int,
     payload: UserUpdateRequest,
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> UserResponse:
     result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
@@ -176,8 +172,8 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: int,
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> Response:
     result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
