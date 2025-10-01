@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class DatabaseConfig(BaseSettings):
     """Database configuration"""
+
     host: str = "localhost"
     port: int = 5432
     username: str = "postgres"
@@ -18,7 +19,11 @@ class DatabaseConfig(BaseSettings):
         """Get database URL"""
         username = quote_plus(self.username)
         password = quote_plus(self.password.get_secret_value())
-        return f"postgresql+asyncpg://{username}:{password}@{self.host}:{self.port}/{self.database}"
+        return (
+            "postgresql+asyncpg://"
+            f"{username}:{password}"
+            f"@{self.host}:{self.port}/{self.database}"
+        )
 
     model_config = SettingsConfigDict(
         env_prefix="DB_",
@@ -31,6 +36,7 @@ class DatabaseConfig(BaseSettings):
 
 class S3Config(BaseSettings):
     """S3 configuration"""
+
     access_key: Optional[str] = None
     secret_key: Optional[str] = None
     region: str = "us-east-1"
@@ -68,6 +74,7 @@ class SecurityConfig(BaseSettings):
 
 class Settings(BaseSettings):
     """Application settings"""
+
     app_name: str = "EcoWhiskey ATC Backend"
     app_version: str = "1.0.0"
     debug: bool = False

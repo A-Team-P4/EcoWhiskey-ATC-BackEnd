@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.database import get_session
+from app.controllers.dependencies import SessionDep
 from app.models.user import User as UserModel
 from app.utils import create_access_token, verify_password
 from app.views import LoginRequest, TokenResponse
-
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -19,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=TokenResponse)
 async def login(
     payload: LoginRequest,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> TokenResponse:
     """Validate credentials and issue a JWT access token."""
 

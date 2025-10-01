@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import os
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from jose import JWTError, jwt
@@ -87,7 +87,11 @@ def create_access_token(
         }
 
     secret = settings.security.jwt_secret_key.get_secret_value()
-    return jwt.encode(to_encode, secret, algorithm=settings.security.jwt_algorithm)
+    return jwt.encode(
+        to_encode,
+        secret,
+        algorithm=settings.security.jwt_algorithm,
+    )
 
 
 def decode_access_token(token: str) -> TokenPayload:
@@ -95,7 +99,9 @@ def decode_access_token(token: str) -> TokenPayload:
 
     secret = settings.security.jwt_secret_key.get_secret_value()
     try:
-        payload = jwt.decode(token, secret, algorithms=[settings.security.jwt_algorithm])
+        payload = jwt.decode(
+            token, secret, algorithms=[settings.security.jwt_algorithm]
+        )
         return TokenPayload.model_validate(payload)
     except (JWTError, ValidationError) as exc:  # pragma: no cover - defensive branch
         raise AuthenticationError("Invalid authentication token") from exc

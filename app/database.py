@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config.settings import settings
-from app.models import Base  # noqa: F401 - ensures metadata is registered
+
 # Import models so they are attached to Base.metadata before table creation
+from app.models import Base  # noqa: F401 - ensures metadata is registered
 from app.models import hello  # noqa: F401
 from app.models import user  # noqa: F401
-
 
 engine: AsyncEngine = create_async_engine(
     settings.database.url,

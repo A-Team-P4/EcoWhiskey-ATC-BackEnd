@@ -1,6 +1,6 @@
 """Hello-world example controller."""
 
-from typing import List
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
@@ -10,14 +10,17 @@ from app.database import get_session
 from app.models.hello import HelloMessage as HelloMessageModel
 from app.views import HelloMessageCreate, HelloMessageRead
 
-
 router = APIRouter(prefix="/hello", tags=["hello"])
+
+
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
+LimitQuery = Annotated[int, Query(default=10, ge=1, le=100)]
 
 
 @router.post("/", response_model=HelloMessageRead, status_code=status.HTTP_201_CREATED)
 async def create_hello_message(
     payload: HelloMessageCreate,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> HelloMessageRead:
     db_message = HelloMessageModel(message=payload.message)
     session.add(db_message)
@@ -28,8 +31,8 @@ async def create_hello_message(
 
 @router.get("/", response_model=List[HelloMessageRead])
 async def list_hello_messages(
-    limit: int = Query(default=10, ge=1, le=100),
-    session: AsyncSession = Depends(get_session),
+    limit: LimitQuery,
+    session: SessionDep,
 ) -> List[HelloMessageRead]:
     result = await session.execute(
         select(HelloMessageModel)
