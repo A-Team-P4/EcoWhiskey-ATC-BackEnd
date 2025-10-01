@@ -106,9 +106,7 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
         try:
             return int(value)
         except (TypeError, ValueError):
-            logger.debug(
-                "Invalid duration in log payload", extra={"value": value}
-            )
+            logger.debug("Invalid duration in log payload", extra={"value": value})
             return None
 
     @staticmethod
