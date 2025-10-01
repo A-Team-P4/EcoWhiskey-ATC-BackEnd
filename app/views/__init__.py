@@ -10,6 +10,7 @@ from .users import (
 from .hello import HelloMessageCreate, HelloMessageRead
 from .tts import TextToSpeechRequest
 from .common import ErrorResponse, SuccessResponse
+from .auth import LoginRequest, TokenResponse
 
 __all__ = [
     "User",
@@ -22,4 +23,6 @@ __all__ = [
     "TextToSpeechRequest",
     "ErrorResponse",
     "SuccessResponse",
+    "LoginRequest",
+    "TokenResponse",
 ]
