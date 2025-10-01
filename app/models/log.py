@@ -24,3 +24,4 @@ class RequestLog(Base):
     user = Column(JSON, nullable=True)
 
 __all__ = ["RequestLog"]
+
