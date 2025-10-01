@@ -74,8 +74,8 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
 
         timestamp_value = datetime.fromisoformat(payload["timestamp"])
         if timestamp_value.tzinfo is not None:
-            timestamp_value = (
-                timestamp_value.astimezone(timezone.utc).replace(tzinfo=None)
+            timestamp_value = timestamp_value.astimezone(timezone.utc).replace(
+                tzinfo=None
             )
 
         async with SessionFactory() as session:
@@ -106,7 +106,9 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
         try:
             return int(value)
         except (TypeError, ValueError):
-            logger.debug("Invalid duration in log payload", extra={"value": value})
+            logger.debug(
+                "Invalid duration in log payload", extra={"value": value}
+            )
             return None
 
     @staticmethod
