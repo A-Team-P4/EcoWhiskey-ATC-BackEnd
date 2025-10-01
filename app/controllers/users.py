@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.controllers.dependencies import get_current_user
-from app.database import get_session
+from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.user import User as UserModel
 from app.utils import hash_password
 from app.views import (
@@ -19,14 +17,15 @@ from app.views import (
     UserUpdateRequest,
 )
 
-
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("/", response_model=UserRegistrationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=UserRegistrationResponse, status_code=status.HTTP_201_CREATED
+)
 async def register_user(
     payload: UserRegistrationRequest,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> UserRegistrationResponse:
     result = await session.execute(
         select(UserModel).where(UserModel.email == payload.email)
@@ -67,7 +66,7 @@ async def register_user(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
-    current_user: UserModel = Depends(get_current_user),
+    current_user: CurrentUserDep,
 ) -> UserResponse:
     return UserResponse(
         id=current_user.id,
@@ -84,15 +83,15 @@ async def get_current_user_profile(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: int,
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> UserResponse:
-    result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
-    )
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     return UserResponse(
         id=db_user.id,
@@ -108,8 +107,8 @@ async def get_user(
 
 @router.get("/", response_model=List[UserResponse])
 async def list_users(
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> List[UserResponse]:
     result = await session.execute(select(UserModel))
     users = result.scalars().all()
@@ -132,15 +131,15 @@ async def list_users(
 async def update_user(
     user_id: int,
     payload: UserUpdateRequest,
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> UserResponse:
-    result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
-    )
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     if payload.firstName is not None:
         db_user.first_name = payload.firstName
@@ -173,15 +172,15 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: int,
-    session: AsyncSession = Depends(get_session),
-    _current_user: UserModel = Depends(get_current_user),
+    session: SessionDep,
+    _current_user: CurrentUserDep,
 ) -> Response:
-    result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
-    )
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     db_user = result.scalar_one_or_none()
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     await session.delete(db_user)
     await session.commit()
