@@ -119,14 +119,34 @@ class RadioTtsService:
         tail = self._squelch_tail()
         return np.concatenate([hiss, tail], axis=0)
 
-    def _bandpass(self, audio: np.ndarray, lo: int = 300, hi: int = 3000, order: int = 4) -> np.ndarray:
-        sos = butter(order, [lo / (self._sample_rate / 2), hi / (self._sample_rate / 2)], btype="bandpass", output="sos")
+    def _bandpass(
+        self,
+        audio: np.ndarray,
+        lo: int = 300,
+        hi: int = 3000,
+        order: int = 4,
+    ) -> np.ndarray:
+        nyquist = self._sample_rate / 2
+        sos = butter(
+            order,
+            [lo / nyquist, hi / nyquist],
+            btype="bandpass",
+            output="sos",
+        )
         return sosfiltfilt(sos, audio)
 
-    def _soft_compress(self, audio: np.ndarray, thresh_db: float = -14.0, ratio: float = 3.0, win_ms: int = 10) -> np.ndarray:
+    def _soft_compress(
+        self,
+        audio: np.ndarray,
+        thresh_db: float = -14.0,
+        ratio: float = 3.0,
+        win_ms: int = 10,
+    ) -> np.ndarray:
         n = max(1, int(self._sample_rate * win_ms / 1000))
         kernel = np.ones(n, dtype=np.float32) / n
-        rms = np.sqrt(np.maximum(1e-9, np.convolve(audio**2, kernel, mode="same")))
+        rms = np.sqrt(
+            np.maximum(1e-9, np.convolve(audio**2, kernel, mode="same"))
+        )
         level_db = 20 * np.log10(rms + 1e-9)
         over = np.maximum(0.0, level_db - thresh_db)
         gain_db = -over * (1.0 - 1.0 / ratio)
@@ -136,13 +156,17 @@ class RadioTtsService:
     def _add_hiss(self, audio: np.ndarray) -> np.ndarray:
         noise_rms_target = 10 ** (self._noise_db / 20.0)
         noise = np.random.normal(0.0, 1.0, size=audio.shape).astype(np.float32)
-        noise *= noise_rms_target / (np.sqrt(np.mean(noise**2) + 1e-9))
+        noise *= noise_rms_target / (
+            np.sqrt(np.mean(noise**2) + 1e-9)
+        )
         return audio + noise
 
     def _squelch_tail(self, tail_ms: int = 70) -> np.ndarray:
         n = int(self._sample_rate * tail_ms / 1000)
         tail = np.random.normal(0.0, 1.0, size=n).astype(np.float32)
-        tail *= (10 ** (self._tail_noise_db / 20.0)) / (np.sqrt(np.mean(tail**2) + 1e-9))
+        tail *= (10 ** (self._tail_noise_db / 20.0)) / (
+            np.sqrt(np.mean(tail**2) + 1e-9)
+        )
         envelope = np.exp(-np.linspace(0, 5, n)).astype(np.float32)
         return tail * envelope
 

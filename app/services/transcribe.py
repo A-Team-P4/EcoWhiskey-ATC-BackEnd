@@ -86,7 +86,9 @@ class TranscribeService:
         try:
             await self._start_job(job_name, media_uri)
             job_info = await self._wait_for_job(job_name)
-            transcript_uri = job_info["TranscriptionJob"]["Transcript"]["TranscriptFileUri"]
+            transcript_uri = job_info["TranscriptionJob"]["Transcript"][
+                "TranscriptFileUri"
+            ]
             transcript_text = await self._fetch_transcript(transcript_uri)
             return TranscriptionResult(
                 transcript=transcript_text,
@@ -158,18 +160,25 @@ class TranscribeService:
                     TranscriptionJobName=job_name,
                 )
             except (BotoCoreError, ClientError) as exc:
-                raise TranscriptionError("Failed to fetch transcription job status.") from exc
+                raise TranscriptionError(
+                    "Failed to fetch transcription job status."
+                ) from exc
 
             job = response.get("TranscriptionJob", {})
             status = job.get("TranscriptionJobStatus")
             if status == "COMPLETED":
                 return response
             if status == "FAILED":
-                reason = job.get("FailureReason", "Transcription job failed without a reason.")
+                reason = job.get(
+                    "FailureReason",
+                    "Transcription job failed without a reason.",
+                )
                 raise TranscriptionError(f"Transcription job failed: {reason}")
 
             if loop.time() >= deadline:
-                raise TranscriptionError("Transcription job timed out before completion.")
+                raise TranscriptionError(
+                    "Transcription job timed out before completion."
+                )
 
             await asyncio.sleep(self._poll_interval)
 
@@ -199,7 +208,11 @@ class TranscribeService:
                 Key=object_key,
             )
         except (BotoCoreError, ClientError) as exc:
-            logger.warning("Failed to delete temporary audio object '%s': %s", object_key, exc)
+            logger.warning(
+                "Failed to delete temporary audio object '%s': %s",
+                object_key,
+                exc,
+            )
 
 
 def get_transcribe_service() -> TranscribeService:

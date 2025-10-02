@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config.settings import settings
-from .controllers import audio, auth, hello, test, tts, users
+from .controllers import audio, auth, test, tts, users
 from .database import init_models
 from .middleware import StructuredLoggingMiddleware, TelemetryMiddleware
 

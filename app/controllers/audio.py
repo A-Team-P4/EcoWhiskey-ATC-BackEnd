@@ -22,12 +22,15 @@ _ALLOWED_CONTENT_TYPES: Final[set[str]] = {"audio/mpeg", "audio/mp3"}
 _transcribe_service = get_transcribe_service()
 _radio_tts_service = get_radio_tts_service()
 
+_SESSION_ID_FORM = Form(...)
+_AUDIO_FILE_UPLOAD = File(...)
+
 
 @router.post("/analyze")
 async def analyze_audio(
-     _current_user: CurrentUserDep,
-    session_id: UUID = Form(...),
-    audio_file: UploadFile = File(...),
+    _current_user: CurrentUserDep,
+    session_id: UUID = _SESSION_ID_FORM,
+    audio_file: UploadFile = _AUDIO_FILE_UPLOAD,
 ) -> dict[str, Any]:
     """Transcribe an uploaded MP3 file and generate a Polly readback."""
 
@@ -54,12 +57,18 @@ async def analyze_audio(
             content_type=content_type,
         )
     except TranscriptionError as exc:  # pragma: no cover - integration failure
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
 
     try:
         readback = await _radio_tts_service.synthesize_readback(result.transcript)
     except RadioTtsError as exc:  # pragma: no cover - integration failure
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
 
     try:
         object_key, audio_url = await upload_readback_audio(
@@ -69,7 +78,10 @@ async def analyze_audio(
             extension="wav",
         )
     except StorageError as exc:  # pragma: no cover - integration failure
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
 
     return {
         "session_id": str(session_id),
