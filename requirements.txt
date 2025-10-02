@@ -11,3 +11,4 @@ boto3
 greenlet
 python-jose[cryptography]
 prometheus-client
+python-multipart
