@@ -8,9 +8,9 @@ import logging
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Any
-from uuid import UUID, uuid4
 from urllib.error import URLError
 from urllib.request import urlopen
+from uuid import UUID, uuid4
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi.concurrency import run_in_threadpool

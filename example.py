@@ -653,9 +653,7 @@ def comp_soft(
 ) -> np.ndarray:
     n = max(1, int(sr * win_ms / 1000))
     kernel = np.ones(n, dtype=np.float32) / n
-    rms = np.sqrt(
-        np.maximum(1e-9, np.convolve(x**2, kernel, mode="same"))
-    )
+    rms = np.sqrt(np.maximum(1e-9, np.convolve(x**2, kernel, mode="same")))
     level_db = 20 * np.log10(rms + 1e-9)
     over = np.maximum(0.0, level_db - thresh_db)
     gain_db = -over * (1.0 - 1.0 / ratio)
@@ -666,9 +664,7 @@ def comp_soft(
 def add_hiss(x: np.ndarray, noise_db=-32.0) -> np.ndarray:
     rms_target = 10 ** (noise_db / 20.0)
     n = np.random.normal(0.0, 1.0, size=x.shape).astype(np.float32)
-    n *= rms_target / (
-        np.sqrt(np.mean(n**2) + 1e-9)
-    )
+    n *= rms_target / (np.sqrt(np.mean(n**2) + 1e-9))
     return x + n
 
 
