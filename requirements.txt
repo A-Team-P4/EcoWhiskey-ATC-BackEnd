@@ -8,6 +8,8 @@ alembic
 asyncpg
 python-dotenv
 boto3
+numpy
+scipy
 greenlet
 python-jose[cryptography]
 prometheus-client

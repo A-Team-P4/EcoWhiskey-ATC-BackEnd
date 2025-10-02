@@ -50,6 +50,20 @@ class S3Config(BaseSettings):
     )
 
 
+class PollyConfig(BaseSettings):
+    """Amazon Polly configuration."""
+
+    region: str = "us-east-1"
+    default_voice_id: str = "Mia"
+
+    model_config = SettingsConfigDict(
+        env_prefix="POLLY_",
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
 class SecurityConfig(BaseSettings):
     """JWT and application security configuration."""
 
@@ -86,6 +100,9 @@ class Settings(BaseSettings):
 
     # S3
     s3: S3Config = Field(default_factory=S3Config)
+
+    # Polly
+    polly: PollyConfig = Field(default_factory=PollyConfig)
 
     # Security
     security: SecurityConfig = Field(default_factory=SecurityConfig)
