@@ -8,12 +8,13 @@ import sys
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config.settings import settings
 from .controllers import auth, test, tts, users
 from .database import init_models
-from .middleware import StructuredLoggingMiddleware
+from .middleware import StructuredLoggingMiddleware, TelemetryMiddleware
 
 
 def _configure_logging() -> None:
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
         description="EcoWhiskey Air Traffic Control Backend API",
     )
 
+    app.add_middleware(TelemetryMiddleware)
     app.add_middleware(StructuredLoggingMiddleware)
 
     app.add_middleware(
@@ -56,7 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(tts.router)
     app.include_router(test.router)
 
-    @app.get("/")
+    @app.get("/", include_in_schema=False)
     async def root() -> dict[str, str]:
         """Root endpoint."""
 
@@ -66,7 +68,7 @@ def create_app() -> FastAPI:
             "status": "operational",
         }
 
-    @app.get("/health")
+    @app.get("/health", include_in_schema=False)
     async def health_check() -> dict[str, str]:
         """Health check endpoint."""
 
@@ -75,6 +77,12 @@ def create_app() -> FastAPI:
             "service": settings.app_name,
             "version": settings.app_version,
         }
+
+    @app.get("/metrics", include_in_schema=False)
+    async def metrics() -> Response:
+        """Expose application metrics for Prometheus scraping."""
+
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request, exc):
