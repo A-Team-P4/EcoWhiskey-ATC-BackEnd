@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.config.settings import settings
 from app.controllers.dependencies import SessionDep
 from app.models.user import User as UserModel
+from app.telemetry import increment_login
 from app.utils import create_access_token, verify_password
 from app.views import LoginRequest, TokenResponse
 
@@ -35,6 +36,8 @@ async def login(
     access_token = create_access_token(subject=str(user.id), user=user)
     expires_in = settings.security.access_token_expires_minutes * 60
     full_name = f"{user.first_name} {user.last_name}".strip()
+
+    increment_login()
 
     return TokenResponse(
         access_token=access_token,
