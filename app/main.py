@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config.settings import settings
-from .controllers import auth, test, tts, users
+from .controllers import audio, auth, test, tts, users
 from .database import init_models
 from .middleware import StructuredLoggingMiddleware, TelemetryMiddleware
 
@@ -56,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(users.router)
     app.include_router(tts.router)
+    app.include_router(audio.router)
     app.include_router(test.router)
 
     @app.get("/", include_in_schema=False)
