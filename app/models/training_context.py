@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy import Column, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -33,7 +33,7 @@ class TrainingContext(Base):
         index=True,
     )
     context = Column(
-        JSONB,  # JSON if you’re storing structured context data; switch to String if it’s plain text
+        JSONB,
         nullable=False,
     )
 
