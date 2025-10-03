@@ -20,7 +20,7 @@ async def create_flight_context(
     payload: TrainingContextRequest,
     session: SessionDep,
 ) -> TrainingContextResponse:
-    """Create a new flight context with a unique trainingSessionId and persist it."""
+    """Create a new flight context with a unique trainingSessionId and persist it. """
 
     training_session_id = uuid4()
 
