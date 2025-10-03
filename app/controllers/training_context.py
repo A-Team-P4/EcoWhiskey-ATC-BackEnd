@@ -1,4 +1,5 @@
 """Flight context endpoints."""
+
 from uuid import uuid4
 
 from fastapi import APIRouter, status
