@@ -1,6 +1,6 @@
 """Database configuration and session management for the MVC layout."""
 
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from app.config.settings import settings
 
@@ -17,11 +18,24 @@ from app.models import hello  # noqa: F401
 from app.models import log  # noqa: F401
 from app.models import user  # noqa: F401
 
-engine: AsyncEngine = create_async_engine(
-    settings.database.url,
-    echo=settings.debug,
-    future=True,
-)
+
+def _create_engine() -> AsyncEngine:
+    """Create an async engine with environment-appropriate pooling."""
+
+    engine_options: dict[str, Any] = {
+        "echo": settings.debug,
+        "future": True,
+        "pool_pre_ping": True,
+    }
+
+    if settings.database.serverless or settings.debug:
+        # Disable pooling when working with serverless databases (or in debug).
+        engine_options["poolclass"] = NullPool
+
+    return create_async_engine(settings.database.url, **engine_options)
+
+
+engine: AsyncEngine = _create_engine()
 
 SessionFactory = async_sessionmaker(
     engine,
@@ -42,3 +56,9 @@ async def init_models() -> None:
 
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+
+
+async def dispose_engine() -> None:
+    """Dispose of the engine and release pooled connections."""
+
+    await engine.dispose()
