@@ -13,7 +13,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config.settings import settings
 from .controllers import audio, auth, test, tts, users
-from .database import init_models
+from .database import dispose_engine, init_models
 from .middleware import StructuredLoggingMiddleware, TelemetryMiddleware
 
 
@@ -102,6 +102,10 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_event() -> None:
         await init_models()
+
+    @app.on_event("shutdown")
+    async def shutdown_event() -> None:
+        await dispose_engine()
 
     return app
 

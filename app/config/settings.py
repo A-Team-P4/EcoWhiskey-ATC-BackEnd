@@ -13,6 +13,10 @@ class DatabaseConfig(BaseSettings):
     username: str = "postgres"
     password: SecretStr = Field(default=SecretStr("postgres"))
     database: str = "ecowhiskey_atc"
+    serverless: bool = Field(
+        default=True,
+        description="If true, disable connection pooling so serverless DBs can pause.",
+    )
 
     @property
     def url(self) -> str:
