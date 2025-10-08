@@ -1,5 +1,6 @@
 """Audio analysis endpoints."""
 
+import mimetypes
 from typing import Any, Final
 from uuid import UUID
 
@@ -17,7 +18,13 @@ from app.services import (
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
-_ALLOWED_CONTENT_TYPES: Final[set[str]] = {"audio/mpeg", "audio/mp3"}
+_ALLOWED_CONTENT_TYPES: Final[set[str]] = {
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/x-m4a",
+    "audio/m4a",
+}
 
 _transcribe_service = get_transcribe_service()
 _radio_tts_service = get_radio_tts_service()
@@ -32,16 +39,23 @@ async def analyze_audio(
     session_id: UUID = _SESSION_ID_FORM,
     audio_file: UploadFile = _AUDIO_FILE_UPLOAD,
 ) -> dict[str, Any]:
-    """Transcribe an uploaded MP3 file and generate a Polly readback."""
+    """Transcribe an uploaded MP3 or M4A file and generate a Polly readback."""
 
-    if audio_file.content_type not in _ALLOWED_CONTENT_TYPES:
+    content_type = audio_file.content_type
+    if not content_type and audio_file.filename:
+        guessed_type, _ = mimetypes.guess_type(audio_file.filename)
+        content_type = guessed_type
+
+    if not content_type:
+        content_type = "audio/mpeg"
+
+    if content_type not in _ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only MP3 audio files are supported",
+            detail="Only MP3 or M4A audio files are supported",
         )
 
     audio_bytes = await audio_file.read()
-    content_type = audio_file.content_type or "audio/mpeg"
     await audio_file.close()
 
     if not audio_bytes:

@@ -59,7 +59,7 @@ class TranscribeService:
             raise ValueError("An S3 bucket name is required for transcription uploads.")
         self._bucket_name = bucket_name
         self._language_code = language_code
-        self._media_format = media_format
+        self._default_media_format = media_format
         self._media_sample_rate_hz = media_sample_rate_hz
         self._poll_interval = poll_interval
         self._timeout_seconds = timeout_seconds
@@ -77,14 +77,15 @@ class TranscribeService:
         if not audio_bytes:
             raise TranscriptionError("The uploaded audio file is empty.")
 
-        object_key = self._build_object_key(session_id)
+        media_format = self._determine_media_format(content_type)
+        object_key = self._build_object_key(session_id, media_format)
         await self._upload_to_s3(audio_bytes, content_type, object_key)
 
         job_name = self._build_job_name(session_id)
         media_uri = f"s3://{self._bucket_name}/{object_key}"
 
         try:
-            await self._start_job(job_name, media_uri)
+            await self._start_job(job_name, media_uri, media_format)
             job_info = await self._wait_for_job(job_name)
             transcript_uri = job_info["TranscriptionJob"]["Transcript"][
                 "TranscriptFileUri"
@@ -101,8 +102,17 @@ class TranscribeService:
             if self._cleanup_objects:
                 await self._delete_from_s3(object_key)
 
-    def _build_object_key(self, session_id: UUID) -> str:
-        return f"sessions/{session_id}/{uuid4().hex}.{self._media_format}"
+    def _determine_media_format(self, content_type: str | None) -> str:
+        if content_type:
+            normalized = content_type.lower()
+            if normalized in {"audio/mp4", "audio/x-m4a", "audio/m4a"}:
+                return "mp4"
+            if normalized in {"audio/mpeg", "audio/mp3"}:
+                return "mp3"
+        return self._default_media_format
+
+    def _build_object_key(self, session_id: UUID, media_format: str) -> str:
+        return f"sessions/{session_id}/{uuid4().hex}.{media_format}"
 
     def _build_job_name(self, session_id: UUID) -> str:
         return f"{self._job_name_prefix}{session_id}-{uuid4().hex}"
@@ -128,11 +138,11 @@ class TranscribeService:
         finally:
             buffer.close()
 
-    async def _start_job(self, job_name: str, media_uri: str) -> None:
+    async def _start_job(self, job_name: str, media_uri: str, media_format: str) -> None:
         kwargs: dict[str, Any] = {
             "TranscriptionJobName": job_name,
             "LanguageCode": self._language_code,
-            "MediaFormat": self._media_format,
+            "MediaFormat": media_format,
             "Media": {"MediaFileUri": media_uri},
         }
         if self._media_sample_rate_hz:
