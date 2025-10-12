@@ -10,7 +10,7 @@ from app.controllers.dependencies import SessionDep
 from app.models.user import User as UserModel
 from app.telemetry import increment_login
 from app.utils import create_access_token, verify_password
-from app.views import LoginRequest, TokenResponse
+from app.views import LoginRequest, SchoolResponse, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -39,10 +39,11 @@ async def login(
 
     increment_login()
 
+    school = SchoolResponse.model_validate(user.school) if user.school else None
     return TokenResponse(
         access_token=access_token,
         expires_in=expires_in,
         account_type=user.account_type.value,
         name=full_name,
-        school=user.school,
+        school=school,
     )

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.views.schools import SchoolResponse
+
 
 class LoginRequest(BaseModel):
     """Credentials submitted to obtain an access token."""
@@ -24,7 +26,10 @@ class TokenResponse(BaseModel):
     )
     account_type: str = Field(serialization_alias="accountType")
     name: str = Field(serialization_alias="name")
-    school: str | None = Field(default=None, serialization_alias="school")
+    school: SchoolResponse | None = Field(
+        default=None,
+        serialization_alias="school",
+    )
 
 
 __all__ = ["LoginRequest", "TokenResponse"]

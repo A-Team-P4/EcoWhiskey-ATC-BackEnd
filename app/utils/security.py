@@ -82,10 +82,7 @@ def create_access_token(
         full_name = f"{user.first_name} {user.last_name}".strip()
         to_encode["user"] = {
             "id": user.id,
-            "email": user.email,
             "name": full_name,
-            "accountType": getattr(user.account_type, "value", user.account_type),
-            "school": user.school,
         }
 
     secret = settings.security.jwt_secret_key.get_secret_value()
