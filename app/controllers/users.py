@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
-
 from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.user import User as UserModel
+
 from app.utils import hash_password
 from app.views import (
     UserRegistrationRequest,
@@ -105,11 +103,11 @@ async def get_user(
     )
 
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("/", response_model=list[UserResponse], include_in_schema=False)
 async def list_users(
     session: SessionDep,
     _current_user: CurrentUserDep,
-) -> List[UserResponse]:
+) -> list[UserResponse]:
     result = await session.execute(select(UserModel))
     users = result.scalars().all()
     print(_current_user)
