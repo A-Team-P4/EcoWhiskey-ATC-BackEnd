@@ -49,7 +49,7 @@ class TranscribeService:
         *,
         language_code: str = "es-US",
         media_format: str = "mp3",
-        media_sample_rate_hz: int | None = 24000,
+        media_sample_rate_hz: int | None = None,
         poll_interval: float = 2.0,
         timeout_seconds: float = 120.0,
         cleanup_objects: bool = True,
@@ -145,7 +145,7 @@ class TranscribeService:
             "MediaFormat": media_format,
             "Media": {"MediaFileUri": media_uri},
         }
-        if self._media_sample_rate_hz:
+        if self._media_sample_rate_hz is not None:
             kwargs["MediaSampleRateHertz"] = self._media_sample_rate_hz
 
         try:
