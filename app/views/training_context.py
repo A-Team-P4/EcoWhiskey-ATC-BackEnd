@@ -18,9 +18,5 @@ class TrainingContextResponse(BaseModel):
     trainingSessionId: UUID = Field(
         ..., description="Unique training session identifier", alias="trainingSessionId"
     )
-    context: Dict[str, Any] = Field(
-        ..., description="The structured training context data"
-    )
-
     class Config:
         populate_by_name = True
