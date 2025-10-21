@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.controllers.dependencies import CurrentUserDep, SessionDep
@@ -24,24 +24,30 @@ async def create_school(
     _current_user: CurrentUserDep,
 ) -> SchoolResponse:
     name = payload.name.strip()
+    value = payload.value.strip()
     location = payload.location.strip()
 
-    if not name or not location:
+    if not name or not value or not location:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Name and location cannot be empty",
+            detail="Name, value, and location cannot be empty",
         )
 
     existing = await session.execute(
-        select(SchoolModel).where(func.lower(SchoolModel.name) == name.lower())
+        select(SchoolModel).where(
+            or_(
+                func.lower(SchoolModel.name) == name.lower(),
+                func.lower(SchoolModel.value) == value.lower(),
+            )
+        )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="School with this name already exists",
+            detail="School with this name or value already exists",
         )
 
-    school = SchoolModel(name=name, location=location)
+    school = SchoolModel(name=name, value=value, location=location)
     session.add(school)
     try:
         await session.commit()
@@ -101,6 +107,9 @@ async def update_school(
             detail="School not found",
         )
 
+    new_name = school.name
+    new_value = school.value
+    new_location = school.location
     if payload.name is not None:
         new_name = payload.name.strip()
         if not new_name:
@@ -108,7 +117,13 @@ async def update_school(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Name cannot be empty",
             )
-        school.name = new_name
+    if payload.value is not None:
+        new_value = payload.value.strip()
+        if not new_value:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Value cannot be empty",
+            )
     if payload.location is not None:
         new_location = payload.location.strip()
         if not new_location:
@@ -116,7 +131,29 @@ async def update_school(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Location cannot be empty",
             )
+    # update location after validation
+    if payload.location is not None:
         school.location = new_location
+
+    if payload.name is not None or payload.value is not None:
+        dup_query = await session.execute(
+            select(SchoolModel).where(
+                SchoolModel.id != school_id,
+                or_(
+                    func.lower(SchoolModel.name) == new_name.lower(),
+                    func.lower(SchoolModel.value) == new_value.lower(),
+                ),
+            )
+        )
+        if dup_query.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Another school already uses this name or value",
+            )
+    if payload.name is not None:
+        school.name = new_name
+    if payload.value is not None:
+        school.value = new_value
 
     try:
         await session.commit()

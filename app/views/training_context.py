@@ -1,5 +1,6 @@
-from uuid import UUID
+from datetime import datetime
 from typing import Any, Dict
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -18,5 +19,26 @@ class TrainingContextResponse(BaseModel):
     trainingSessionId: UUID = Field(
         ..., description="Unique training session identifier", alias="trainingSessionId"
     )
+    context: Dict[str, Any] = Field(
+        ..., description="Structured training context payload as persisted"
+    )
+
+    class Config:
+        populate_by_name = True
+
+
+class TrainingContextHistoryItem(BaseModel):
+    """History entry describing a persisted training context."""
+
+    trainingSessionId: UUID = Field(
+        ..., description="Unique training session identifier", alias="trainingSessionId"
+    )
+    context: Dict[str, Any] = Field(
+        ..., description="Structured training context payload as persisted"
+    )
+    createdAt: datetime = Field(
+        ..., description="Timestamp when the context was created", alias="createdAt"
+    )
+
     class Config:
         populate_by_name = True

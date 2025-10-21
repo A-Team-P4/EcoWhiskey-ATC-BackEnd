@@ -15,6 +15,7 @@ class School(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(120), nullable=False, unique=True, index=True)
+    value = Column(String(20), nullable=False, unique=True, index=True)
     location = Column(String(120), nullable=False)
     created_at = Column(
         DateTime,

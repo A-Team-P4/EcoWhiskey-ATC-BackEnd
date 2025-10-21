@@ -57,6 +57,13 @@ def _quote_identifier(identifier: str) -> str:
 
 _SCHEMA_NAME = _normalise_schema_name(getattr(settings.database, "schema", None))
 
+if _SCHEMA_NAME:
+    # Ensure SQLAlchemy emits DDL for the configured schema.
+    Base.metadata.schema = _SCHEMA_NAME
+    for table in Base.metadata.tables.values():
+        if table.schema is None:
+            table.schema = _SCHEMA_NAME
+
 
 def _create_engine() -> AsyncEngine:
     """Create an async engine with environment-appropriate pooling."""
@@ -93,6 +100,64 @@ async def _ensure_search_path(target: Any) -> None:
     await target.execute(text(f'SET search_path TO "{quoted_schema}", public'))
 
 
+async def _apply_backfill_migrations(conn: Any) -> None:
+    """Apply idempotent schema adjustments for legacy databases."""
+
+    # Ensure the schools.value column exists.
+    await conn.execute(
+        text(
+            "ALTER TABLE IF EXISTS schools "
+            "ADD COLUMN IF NOT EXISTS value VARCHAR(20)"
+        )
+    )
+
+    # Backfill missing values with deterministic identifiers.
+    await conn.execute(
+        text(
+            "UPDATE schools "
+            "SET value = CONCAT('school_', id) "
+            "WHERE value IS NULL OR btrim(value) = ''"
+        )
+    )
+
+    # Add a unique constraint if one does not already exist.
+    await conn.execute(
+        text(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'schools'
+                      AND column_name = 'value'
+                ) THEN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM information_schema.table_constraints tc
+                        JOIN information_schema.constraint_column_usage ccu
+                          ON tc.constraint_name = ccu.constraint_name
+                         AND tc.table_schema = ccu.table_schema
+                        WHERE tc.table_schema = current_schema()
+                          AND tc.table_name = 'schools'
+                          AND tc.constraint_type = 'UNIQUE'
+                          AND ccu.column_name = 'value'
+                    ) THEN
+                        ALTER TABLE schools
+                        ADD CONSTRAINT uq_schools_value UNIQUE (value);
+                    END IF;
+
+                    ALTER TABLE schools
+                    ALTER COLUMN value SET NOT NULL;
+                END IF;
+            END
+            $$;
+            """
+        )
+    )
+
+
 @asynccontextmanager
 async def session_scope() -> AsyncIterator[AsyncSession]:
     """Async context manager that yields a configured SQLAlchemy session."""
@@ -120,6 +185,7 @@ async def init_models() -> None:
             )
         await _ensure_search_path(conn)
         await conn.run_sync(Base.metadata.create_all)
+        await _apply_backfill_migrations(conn)
 
     if _SCHEMA_NAME:
         logger.info("Ensured database tables in schema '%s'.", _SCHEMA_NAME)

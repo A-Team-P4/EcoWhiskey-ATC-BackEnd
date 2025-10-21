@@ -11,6 +11,7 @@ class SchoolCreateRequest(BaseModel):
     """Payload for creating a new School."""
 
     name: str = Field(..., min_length=1, max_length=120)
+    value: str = Field(..., min_length=1, max_length=20)
     location: str = Field(..., min_length=1, max_length=120)
 
 
@@ -18,6 +19,7 @@ class SchoolUpdateRequest(BaseModel):
     """Payload for updating an existing School."""
 
     name: str | None = Field(None, min_length=1, max_length=120)
+    value: str | None = Field(None, min_length=1, max_length=20)
     location: str | None = Field(None, min_length=1, max_length=120)
 
 
@@ -26,6 +28,7 @@ class SchoolResponse(BaseModel):
 
     id: int
     name: str = Field(..., max_length=120)
+    value: str = Field(..., max_length=20)
     location: str = Field(..., max_length=120)
     created_at: datetime
 
