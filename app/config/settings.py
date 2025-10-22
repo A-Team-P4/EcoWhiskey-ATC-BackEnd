@@ -68,6 +68,48 @@ class PollyConfig(BaseSettings):
     )
 
 
+class BedrockConfig(BaseSettings):
+    """Amazon Bedrock configuration."""
+
+    region: str = Field(
+        default="us-east-1",
+        validation_alias="BEDROCK_REGION",
+    )
+    model_id: str = Field(
+        default="amazon.nova-micro-v1:0",
+        validation_alias="BEDROCK_MODEL_ID",
+    )
+    max_tokens: int = Field(
+        default=200,
+        validation_alias="BEDROCK_MAX_TOKENS",
+        ge=1,
+        le=4096,
+    )
+    temperature: float = Field(
+        default=0.0,
+        validation_alias="BEDROCK_TEMPERATURE",
+        ge=0.0,
+        le=1.0,
+    )
+    top_p: float = Field(
+        default=0.9,
+        validation_alias="BEDROCK_TOP_P",
+        ge=0.0,
+        le=1.0,
+    )
+    api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias="BEDROCK_API_KEY",
+    )
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        secrets_dir=".secrets",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
 class SecurityConfig(BaseSettings):
     """JWT and application security configuration."""
 
@@ -98,6 +140,8 @@ class Settings(BaseSettings):
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
+    log_file: str = "logs/app.log"
+    audio_log_file: str = "logs/audio_pipeline.log"
 
     # Database
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
@@ -107,6 +151,9 @@ class Settings(BaseSettings):
 
     # Polly
     polly: PollyConfig = Field(default_factory=PollyConfig)
+
+    # Bedrock
+    bedrock: BedrockConfig = Field(default_factory=BedrockConfig)
 
     # Security
     security: SecurityConfig = Field(default_factory=SecurityConfig)

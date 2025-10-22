@@ -1,0 +1,22 @@
+{
+  "id": "ground_taxi_clearance",
+  "frequency_group": "ground",
+  "phrases": {
+    "require_all": [
+      "\\bsuperficie\\b|\\bground\\b|\\brodaje\\b"
+    ],
+    "require_any": [
+      "\\bsolicito\\s+rodaje\\b",
+      "\\bpid[oa]\s+rodaje\\b",
+      "\\b(ruedo|rodaje)\\b",
+      "\\bpunto\\s+de\\s+espera\\b",
+      "\\bpista\\s+\\d{2}\\b"
+    ]
+  },
+  "boost_keywords": [
+    "rodaje",
+    "superficie",
+    "pista",
+    "taxi"
+  ]
+}

@@ -32,7 +32,7 @@ load_dotenv()
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 POLLY_VOICE = os.getenv("POLLY_VOICE_ID", "Mia")  # es-MX
 BEDROCK_MODEL_ID = os.getenv(
-    "BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0"
+    "BEDROCK_MODEL_ID", "amazon.nova-micro-v1:0"
 )
 
 polly = boto3.client("polly", region_name=AWS_REGION)

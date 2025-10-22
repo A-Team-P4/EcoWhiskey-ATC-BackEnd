@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+from logging.handlers import RotatingFileHandler
 import sys
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -18,16 +20,64 @@ from .middleware import StructuredLoggingMiddleware, TelemetryMiddleware
 
 
 def _configure_logging() -> None:
-    """Ensure structured middleware logs stream to stdout."""
+    """Ensure structured middleware logs stream to stdout and file."""
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter("%(message)s"))
+    logging.getLogger().handlers.clear()
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    )
+
+    log_path = Path(settings.log_file)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    file_handler = RotatingFileHandler(
+        log_path,
+        maxBytes=1_000_000,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    )
+
+    root_logger = logging.getLogger()
+    root_logger.addHandler(stdout_handler)
+    root_logger.addHandler(file_handler)
+    root_logger.setLevel(logging.DEBUG if settings.debug else logging.INFO)
 
     middleware_logger = logging.getLogger("app.middleware.structured")
-    middleware_logger.setLevel(logging.INFO)
     middleware_logger.handlers.clear()
-    middleware_logger.addHandler(handler)
+    middleware_stdout = logging.StreamHandler(sys.stdout)
+    middleware_stdout.setFormatter(logging.Formatter("%(message)s"))
+    middleware_logger.addHandler(middleware_stdout)
+    middleware_logger.setLevel(logging.INFO)
     middleware_logger.propagate = False
+
+    pipeline_log_path = Path(settings.audio_log_file)
+    pipeline_log_path.parent.mkdir(parents=True, exist_ok=True)
+    pipeline_handler = RotatingFileHandler(
+        pipeline_log_path,
+        maxBytes=500_000,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    pipeline_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    )
+    pipeline_logger = logging.getLogger("app.services.audio_pipeline")
+    pipeline_logger.handlers.clear()
+    pipeline_logger.addHandler(pipeline_handler)
+    pipeline_logger.setLevel(logging.INFO)
+
+    noisy_loggers = [
+        "botocore",
+        "boto3",
+        "urllib3",
+        "sqlalchemy.engine",
+    ]
+    for name in noisy_loggers:
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def create_app() -> FastAPI:

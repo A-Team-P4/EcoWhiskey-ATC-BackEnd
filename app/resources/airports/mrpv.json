@@ -1,0 +1,7 @@
+{
+  "icao": "MRPV",
+  "name": "Aeropuerto Tobías Bolaños",
+  "default_runway": "uno cero",
+  "alternate_runway": "dos ocho",
+  "primary_tower_frequency": "118.300"
+}
