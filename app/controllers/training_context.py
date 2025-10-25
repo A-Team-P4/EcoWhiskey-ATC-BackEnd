@@ -2,11 +2,13 @@
 
 from uuid import uuid4
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import select
 
 from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.training_context import TrainingContext
 from app.views.training_context import (
+    TrainingContextHistoryItem,
     TrainingContextRequest,
     TrainingContextResponse,
 )
@@ -44,3 +46,37 @@ async def create_flight_context(
         trainingSessionId=db_context.training_session_id,
         context=db_context.context,
     )
+
+
+@router.get(
+    "/history/{user_id}",
+    response_model=list[TrainingContextHistoryItem],
+)
+async def get_training_history(
+    user_id: int,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> list[TrainingContextHistoryItem]:
+    """Return the chronological history of training contexts for the given user."""
+
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to requested user history is forbidden",
+        )
+
+    result = await session.execute(
+        select(TrainingContext)
+        .where(TrainingContext.user_id == user_id)
+        .order_by(TrainingContext.created_at.desc())
+    )
+    contexts = result.scalars().all()
+
+    return [
+        TrainingContextHistoryItem(
+            trainingSessionId=context.training_session_id,
+            context=context.context,
+            createdAt=context.created_at,
+        )
+        for context in contexts
+    ]

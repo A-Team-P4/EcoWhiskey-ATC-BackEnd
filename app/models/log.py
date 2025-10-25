@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, Integer, String
 
 from .base import Base
 
@@ -21,7 +21,11 @@ class RequestLog(Base):
     status_code = Column(Integer, nullable=False)
     client_ip = Column(String(64), nullable=True)
     duration_ms = Column(Integer, nullable=True)
-    user = Column(JSON, nullable=True)
+    session_id = Column(String(512), nullable=True)
+    session_fingerprint = Column(String(64), nullable=True, index=True)
+    session_user_id = Column(String(128), nullable=True, index=True)
+    session_started_at = Column(DateTime, nullable=True)
+    session_expires_at = Column(DateTime, nullable=True)
 
 
 __all__ = ["RequestLog"]

@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Text
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import Integer, String
+from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
@@ -44,7 +45,9 @@ class User(Base):
         SqlEnum(AccountType, name="account_type"),
         nullable=False,
     )
-    school = Column(String(100), nullable=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="SET NULL"), nullable=True)
+    school = relationship("School", back_populates="users", lazy="joined")
+    photo = Column(Text, nullable=True)
     created_at = Column(
         DateTime,
         nullable=False,

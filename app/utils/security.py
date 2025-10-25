@@ -61,6 +61,7 @@ class TokenPayload(BaseModel):
     sub: str
     exp: datetime
     user: dict[str, Any] | None = None
+    iat: datetime | None = None
 
 
 def create_access_token(
@@ -70,20 +71,18 @@ def create_access_token(
 ) -> str:
     """Generate a signed JWT access token for the provided subject."""
 
+    now = datetime.now(timezone.utc)
     expires_delta = expires_delta or timedelta(
         minutes=settings.security.access_token_expires_minutes
     )
-    expire_at = datetime.now(timezone.utc) + expires_delta
-    to_encode: dict[str, Any] = {"sub": subject, "exp": expire_at}
+    expire_at = now + expires_delta
+    to_encode: dict[str, Any] = {"sub": subject, "exp": expire_at, "iat": now}
 
     if user is not None:
         full_name = f"{user.first_name} {user.last_name}".strip()
         to_encode["user"] = {
             "id": user.id,
-            "email": user.email,
             "name": full_name,
-            "accountType": getattr(user.account_type, "value", user.account_type),
-            "school": user.school,
         }
 
     secret = settings.security.jwt_secret_key.get_secret_value()

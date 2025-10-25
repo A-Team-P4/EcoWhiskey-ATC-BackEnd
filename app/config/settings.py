@@ -1,7 +1,7 @@
 from typing import Optional
 from urllib.parse import quote_plus
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,10 @@ class DatabaseConfig(BaseSettings):
     username: str = "postgres"
     password: SecretStr = Field(default=SecretStr("postgres"))
     database: str = "ecowhiskey_atc"
+    schema: Optional[str] = Field(
+        default=None,
+        description="Optional PostgreSQL schema to create and use for the application tables.",
+    )
     serverless: bool = Field(
         default=True,
         description="If true, disable connection pooling so serverless DBs can pause.",
@@ -116,6 +120,12 @@ class Settings(BaseSettings):
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = ["*"]
     cors_allow_headers: list[str] = ["*"]
+
+    # Logging
+    persist_request_logs: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LOG_REQUESTS_TO_DB", "PERSIST_REQUEST_LOGS"),
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
