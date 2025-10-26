@@ -1,0 +1,46 @@
+{
+  "id": "tower_takeoff_clearance",
+  "frequency_group": "tower",
+  "slots": {
+    "required": [
+      "callsign_spelled",
+      "runway_human"
+    ],
+    "optional": [
+      "callsign",
+      "instruction_code",
+      "instruction",
+      "instruction_text",
+      "instruction_codes",
+      "wind_report",
+      "climb_instruction",
+      "report_altitude_phrase",
+      "next_frequency_phrase"
+    ]
+  },
+  "render": {
+    "spanish": "{callsign_spelled}, {instruction_text}",
+    "instruction_map": {
+      "wind_report": "Viento {wind_report}.",
+      "hold_short": "Mantenga fuera de pista.",
+      "line_up_wait": "Ruede a posición y mantenga pista {runway_human}.",
+      "takeoff_clearance": "Autorizado a despegar pista {runway_human}.",
+      "maintain_heading": "{climb_instruction}.",
+      "report_altitude": "Notifique pasando {report_altitude_phrase}.",
+      "contact_next_frequency": "Contacte {next_frequency_phrase}."
+    },
+    "default_instruction_code": "takeoff_clearance"
+  },
+  "metadata": {
+    "default_instruction_code": "takeoff_clearance",
+    "allow_instruction_override": true
+  },
+  "fallback": {
+    "defaults": {
+      "instruction_code": "takeoff_clearance",
+      "callsign": "TRAFICO",
+      "callsign_spelled": "Tráfico",
+      "runway_human": "uno cero"
+    }
+  }
+}

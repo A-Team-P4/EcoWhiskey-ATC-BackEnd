@@ -1,0 +1,32 @@
+{
+  "id": "ground_taxi_clearance",
+  "frequency_group": "ground",
+  "phrases": {
+    "require_all": [],
+    "require_any": [
+      "\\bsolicito\\s+rodaje\\b",
+      "\\bpid[oa]\\s+rodaje\\b",
+      "\\b(ruedo|rodaje)\\b",
+      "\\bpunto\\s+de\\s+espera\\b",
+      "\\bpista\\s+\\d{2}\\b",
+      "\\babr(?:o|imos|ir)\\s+plan\\s+de\\s+vuelo\\b",
+      "\\bplan\\s+de\\s+vuelo\\b",
+      "\\bzona\\s+eco\\b",
+      "\\bochomogo\\b",
+      "\\btransponder\\b",
+      "\\bqnh\\b",
+      "\\balmas\\s+a\\s+bordo\\b"
+    ]
+  },
+  "boost_keywords": [
+    "rodaje",
+    "superficie",
+    "pista",
+    "taxi",
+    "plan de vuelo",
+    "zona eco",
+    "ochomogo",
+    "transponder",
+    "qnh"
+  ]
+}

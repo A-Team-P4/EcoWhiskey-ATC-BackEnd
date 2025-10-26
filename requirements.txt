@@ -14,3 +14,5 @@ greenlet
 python-jose[cryptography]
 prometheus-client
 python-multipart
+requests
+sounddevice

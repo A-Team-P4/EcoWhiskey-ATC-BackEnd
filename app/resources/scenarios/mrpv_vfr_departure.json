@@ -1,0 +1,58 @@
+{
+  "id": "mrpv_vfr_departure",
+  "display_name": "MRPV VFR salida Zona Eco",
+  "airport": "MRPV",
+  "frequencies": {
+    "ground": "121.7",
+    "tower": "118.3"
+  },
+  "student": {
+    "callsign": "ANI",
+    "callsign_spelled": "Alfa Noviembre India",
+    "hangar": "37",
+    "souls_on_board": 2,
+    "fuel_endurance_minutes": 210,
+    "captain": "Salas",
+    "route": "Zona Eco vía paso de Ochomogo",
+    "requested_altitude_ft": 7000
+  },
+  "ground": {
+    "intent": "ground_taxi_clearance",
+    "runway": "10",
+    "runway_human": "uno cero",
+    "wind_direction": 70,
+    "wind_speed": 12,
+    "qnh": "3005",
+    "squawk": "0522",
+    "taxi_route": "Alfa 2, Alfa",
+    "advisory": "Avise listo",
+    "default_instruction_code": "taxi_clearance",
+    "instruction_codes": [
+      "acknowledge",
+      "runway_in_use",
+      "wind_report",
+      "squawk_assignment",
+      "qnh_assignment",
+      "taxi_clearance",
+      "advise_ready"
+    ],
+    "readback": null
+  },
+  "tower": {
+    "intent": "tower_takeoff_clearance",
+    "runway": "10",
+    "runway_human": "uno cero",
+    "wind_direction": 80,
+    "wind_speed": 12,
+    "climb_instruction": "Mantenga rumbo de pista",
+    "report_altitude_ft": 5000,
+    "next_frequency": null,
+    "default_instruction_code": "takeoff_clearance",
+    "instruction_codes": [
+      "wind_report",
+      "takeoff_clearance",
+      "maintain_heading",
+      "report_altitude"
+    ]
+  }
+}
