@@ -313,20 +313,58 @@ This document captures the detailed design for the next iterations of the `/audi
 - Al persistir respuestas LLM (JSON), asegurar cifrado en reposo y control de acceso fino (solo equipo ML / QA). Registrar versión del contrato JSON y del modelo para auditorías.
 - Desacoplar claves (IAM o API key) por entorno y rotarlas periódicamente; documentar procedimiento de revocación inmediata.
 
-## Implementation Roadmap (Draft)
+## Implementation Roadmap (Status)
 
-1. Wire `TrainingContext` into metadata; design `training_turns` schema and repositories.
-2. Implement Frequency Intent Validator with rule engine + stubbed rubric config.
-3. Build stencil repository and prompt orchestration helpers; snapshot tests.
-4. Implement LLM transport client with mock/provider toggles.
-5. Expand `IntentResponseGenerator` y `StudentFeedbackEvaluator`; integrar con el controlador.
-6. Añadir telemetría, feature flags y lógica de fallback.
-7. Levantar evaluation playground + regresiones.
-8. Iterar en rubricas/plantillas con datos reales.
-9. **Nuevo**: migrar a LLM→JSON estructurado; centralizar validación y rellenado de plantillas; eliminar reglas ad-hoc (stopwords) en favor de extracción asistida por modelo.
-10. **Nuevo**: diferenciar prompts por `frequency_group` y permitir escenarios (torre, aproximación, radar, emergencia) sin duplicar lógica.
-11. **Nuevo**: implementar `response_contract`, `template_renderer`, `prompt_builder` y ajustar `call_conversation_llm` para que Polly solo reciba frases renderizadas.
-12. **Nuevo**: añadir pruebas de contrato, snapshots de plantillas y telemetría adicional (`llm_contract_valid`, `llm_fallback_reason`).
+- ☐ Wire `TrainingContext` into metadata; diseñar `training_turns` y repositorios dedicados.
+- ✅ Implementar Frequency Intent Validator con reglas + fallback LLM (incluye bloqueo por frecuencia incorrecta).
+- ✅ Construir repositorio de plantillas, orquestador de prompts y validar via snapshots.
+- ☐ Añadir toggles/mock al cliente LLM y servicios externos para modo offline.
+- ☐ Expandir `IntentResponseGenerator` y `StudentFeedbackEvaluator`; integrarlo con el controlador.
+- ☐ Añadir telemetría operativa, feature flags y lógica de fallback más rica (métricas Prometheus).
+- ☐ Levantar evaluation playground + suites de regresión.
+- 🟡 Iterar en rúbricas/plantillas con datos reales (en progreso inicial con escenario MRPV).
+- ✅ Migrar a contrato LLM→JSON estructurado + validación centralizada de plantillas.
+- ✅ Diferenciar prompts por `frequency_group` para soportar torre/superficie.
+- ✅ Implementar `response_contract`, `template_renderer`, `prompt_builder` y ajustar `call_conversation_llm` para que Polly reciba solo frases renderizadas.
+- ☐ Añadir pruebas de contrato/snapshots automáticas y telemetría (`llm_contract_valid`, `llm_fallback_reason`).
+
+### Next Steps
+
+**Completado recientemente**
+- Validar frecuencia/intención y bloquear respuestas en canal incorrecto.
+- Ampliar reglas de intentos ground/tower y cargar escenario determinista desde JSON.
+- Enriquecer el contrato de slots y normalización con viento, QNH, squawk, taxi_route, etc.
+- Renderizar plantillas multi-frase usando secuencias `instruction_codes`.
+
+**Pendiente inmediato**
+1. **Instrumentación y observabilidad**  
+   - Exponer métricas (`audio_pipeline_frequency_mismatch_total`, `llm_contract_valid_total`, `template_fallback_total`, `render_duration_seconds`).  
+   - Añadir logs estructurados con `prompt_hash`, `scenario_id`, `instruction_codes` para diagnósticos.
+
+2. **Persistencia detallada de turnos**  
+   - Crear tabla `training_turns` y actualizar `append_turn` para reflejar cada intercambio con slots, fallback y audio generado.  
+   - Guardar el estado del escenario (p.ej. fase ground → tower) para que próximos turnos conozcan la fase activa.
+
+3. **Tests y fixtures de regresión**  
+   - Añadir pruebas unitarias/snapshot que reproduzcan el guion completo (“Apertura y rodaje…” + “Punto de espera y salida…”).  
+   - Crear fixtures LLM mock (`tests/data/llm/`) y conectar el evaluation playground cuando exista.
+
+4. **Modo mock y toggles**  
+   - Incorporar flags de settings para forzar Bedrock/Transcribe simulados y documentar el procedimiento en README/Runbook.
+
+5. **Student Feedback & Rubrics**  
+   - Definir rubric rules (call-sign echo, readback completo, fraseología correcta, uso de QNH/QNE) y exponer un puntaje + comentarios accionables.  
+   - Integrar la evaluación antes de sintetizar Polly, de modo que el payload API entregue `controller_response` y `feedback` diferenciados.  
+   - Añadir métricas (`audio_pipeline_feedback_score`) y logs con los hallazgos principales para analytics.
+
+6. **Estrategia de contexto prolongado**  
+   - Persistir resúmenes o turnos clave para que la detección de intentos use historial (no solo el transcript actual).  
+   - Diseñar transición automática de fase (ground → tower → departure) basada en intentos detectados y estado del escenario.
+
+7. **QA de fraseología costarricense**  
+   - Programar sesiones de revisión con instructores locales para vetar cada plantilla y conjunto de slots.  
+   - Registrar observaciones y acciones en un backlog compartido; actualizar prompts/plantillas con el feedback.  
+   - Establecer checklist de lanzamiento que incluya validación bilingüe ASR+LLM+TTS sobre los flujos de rodaje y despegue.
 
 ## Open Questions
 

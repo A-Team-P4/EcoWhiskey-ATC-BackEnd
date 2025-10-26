@@ -66,11 +66,13 @@ class LlmOutcome:
     raw_response: str | None
     structured: StructuredLlmResponse | None
     used_fallback: bool
+    warnings: Sequence[str]
     fallback_reason: str | None = None
 
 
 _RESOURCE_ROOT = Path(__file__).resolve().parents[1] / "resources"
 _TEMPLATE_ROOT = _RESOURCE_ROOT / "templates"
+_SCENARIO_ROOT = _RESOURCE_ROOT / "scenarios"
 _INTENT_DETECTOR = IntentDetector.from_directory(_RESOURCE_ROOT / "intents")
 _TEMPLATE_RENDERER = TemplateRenderer(_TEMPLATE_ROOT)
 _LLM_CLIENT = BedrockLlmClient()
@@ -82,6 +84,27 @@ def _load_resource_json(relative_path: str) -> Mapping[str, Any]:
         return {}
     with resource_path.open("r", encoding="utf-8") as resource_file:
         return json.load(resource_file)
+
+
+def _normalize_frequency_value(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _generate_frequency_variants(value: Any) -> set[str]:
+    variants: set[str] = set()
+    normalized = _normalize_frequency_value(value)
+    if not normalized:
+        return variants
+    variants.add(normalized)
+    try:
+        freq_float = float(normalized)
+    except (TypeError, ValueError):
+        return variants
+    for decimals in (1, 2, 3):
+        variants.add(f"{freq_float:.{decimals}f}")
+    return variants
 
 
 _TOWER_FREQ_DATA = _load_resource_json("frequencies/mrpv_tower.json")
@@ -100,6 +123,26 @@ _FREQUENCY_GROUPS: Mapping[str, set[str]] = {
 }
 
 _AIRPORT_PROFILE = _load_resource_json("airports/mrpv.json")
+_DEFAULT_SCENARIO_ID = "mrpv_vfr_departure"
+
+
+def _load_scenarios() -> Mapping[str, Mapping[str, Any]]:
+    scenarios: dict[str, Mapping[str, Any]] = {}
+    if not _SCENARIO_ROOT.exists():
+        return scenarios
+    for scenario_path in _SCENARIO_ROOT.glob("*.json"):
+        try:
+            with scenario_path.open("r", encoding="utf-8") as scenario_file:
+                data = json.load(scenario_file)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Escenario inválido %s: %s", scenario_path, exc)
+            continue
+        scenario_id = data.get("id") or scenario_path.stem
+        scenarios[scenario_id] = data
+    return scenarios
+
+
+_SCENARIOS = _load_scenarios()
 
 _NATO_WORD_TO_LETTER = {
     key.lower(): value
@@ -201,11 +244,51 @@ async def fetch_session_context(session_id: UUID) -> Mapping[str, Any]:
     context_state = await get_session_context(session_id)
     turns = context_state.get("turns", [])
 
+    scenario_id = (
+        context_state.get("scenario_id")
+        or (context_state.get("scenario") or {}).get("id")
+        or _DEFAULT_SCENARIO_ID
+    )
+    scenario = _SCENARIOS.get(scenario_id) or _SCENARIOS.get(_DEFAULT_SCENARIO_ID, {})
+    if not scenario:
+        logger.debug("No se encontró escenario para session_id=%s id=%s", session_id, scenario_id)
+
+    frequency_map: dict[str, str] = {}
+    frequency_intents: dict[str, str] = {}
+    scenario_frequencies = scenario.get("frequencies", {}) or {}
+    for group, value in scenario_frequencies.items():
+        for variant in _generate_frequency_variants(value):
+            if variant:
+                frequency_map[variant] = group
+
+    for group in ("ground", "tower", "approach", "radar"):
+        section = scenario.get(group)
+        if isinstance(section, Mapping):
+            intent_id = section.get("intent")
+            if isinstance(intent_id, str) and intent_id:
+                frequency_intents[group] = intent_id
+
+    default_frequency_group = scenario.get("default_frequency_group")
+    if not default_frequency_group:
+        if "ground" in frequency_intents:
+            default_frequency_group = "ground"
+        elif "tower" in frequency_intents:
+            default_frequency_group = "tower"
+
     return {
         "airport": "MRPV",
         "session_id": str(session_id),
-        "default_runway": _AIRPORT_PROFILE.get("default_runway", "uno cero"),
+        "scenario_id": scenario.get("id") if scenario else None,
+        "scenario": scenario,
+        "default_runway": (
+            (scenario.get("tower", {}) or {}).get("runway_human")
+            or (scenario.get("ground", {}) or {}).get("runway_human")
+            or _AIRPORT_PROFILE.get("default_runway", "uno cero")
+        ),
         "alternate_runway": _AIRPORT_PROFILE.get("alternate_runway"),
+        "frequency_map": frequency_map,
+        "frequency_intents": frequency_intents,
+        "default_frequency_group": default_frequency_group,
         "recent_turns": turns[-8:],
     }
 
@@ -307,11 +390,31 @@ async def build_llm_request(
     if not template:
         raise TemplateRenderError(f"No existe plantilla para intent '{intent}'.")
 
+    scenario = context.get("scenario") or {}
+    scenario_defaults: Mapping[str, Any] = scenario.get(frequency_group, {}) or {}
+    runway_conditions = None
+    if scenario_defaults.get("runway_human"):
+        runway_conditions = f"Pista en uso {scenario_defaults['runway_human']}"
+    elif scenario_defaults.get("runway"):
+        runway_conditions = f"Pista en uso {scenario_defaults['runway']}"
+
+    weather_bits: list[str] = []
+    wind_report = _format_wind_report(
+        scenario_defaults.get("wind_direction"),
+        scenario_defaults.get("wind_speed"),
+    )
+    if wind_report:
+        weather_bits.append(f"Viento {wind_report}")
+    qnh_value = scenario_defaults.get("qnh")
+    if qnh_value:
+        weather_bits.append(f"QNH {qnh_value}")
+    weather_snippet = ", ".join(weather_bits) if weather_bits else None
+
     prompt_context = PromptContext(
         frequency_group=frequency_group,
         airport=context.get("airport", "MRPV"),
-        runway_conditions=context.get("runway_conditions"),
-        weather_snippet=context.get("weather"),
+        runway_conditions=runway_conditions,
+        weather_snippet=weather_snippet,
         recent_turns=context.get("recent_turns"),
     )
 
@@ -411,6 +514,7 @@ async def call_conversation_llm(request: LlmRequest) -> LlmOutcome:
             raw_response=raw_response,
             structured=structured,
             used_fallback=False,
+            warnings=warnings,
         )
 
     except (LlmInvocationError, ValidationError, ResponseContractError, TemplateRenderError) as exc:
@@ -420,7 +524,7 @@ async def call_conversation_llm(request: LlmRequest) -> LlmOutcome:
             request.intent,
             fallback_reason,
         )
-        fallback_slots, _ = _normalize_slots(
+        fallback_slots, fallback_warnings = _normalize_slots(
             structured=None,
             transcript=request.transcript,
             context=request.context,
@@ -449,6 +553,7 @@ async def call_conversation_llm(request: LlmRequest) -> LlmOutcome:
             raw_response=raw_response,
             structured=structured,
             used_fallback=True,
+            warnings=fallback_warnings,
             fallback_reason=fallback_reason,
         )
 
@@ -471,6 +576,13 @@ def _normalize_slots(
 ) -> tuple[dict[str, Any], list[str]]:
     warnings: list[str] = []
 
+    scenario: Mapping[str, Any] = context.get("scenario") or {}
+    scenario_student: Mapping[str, Any] = scenario.get("student") or {}
+    active_frequency_group: str | None = context.get("active_frequency_group")
+    scenario_defaults: Mapping[str, Any] = {}
+    if active_frequency_group:
+        scenario_defaults = scenario.get(active_frequency_group, {}) or {}
+
     fallback_callsign = _extract_callsign(transcript)
     fallback_callsign_spelled = (
         _spell_callsign(fallback_callsign) if fallback_callsign else None
@@ -480,7 +592,11 @@ def _normalize_slots(
 
     slots_payload = structured.slots if structured else None
 
-    callsign = (slots_payload.callsign if slots_payload else None) or fallback_callsign
+    callsign = (
+        (slots_payload.callsign if slots_payload else None)
+        or fallback_callsign
+        or scenario_student.get("callsign")
+    )
     if callsign:
         callsign = callsign.upper()
     else:
@@ -490,6 +606,7 @@ def _normalize_slots(
     callsign_spelled = (
         (slots_payload.callsign_spelled if slots_payload else None)
         or fallback_callsign_spelled
+        or scenario_student.get("callsign_spelled")
         or _spell_callsign(callsign)
     )
     if callsign_spelled and "no callsign" in callsign_spelled.lower():
@@ -521,8 +638,129 @@ def _normalize_slots(
             normalized["heading"] = slots_payload.heading
         if slots_payload.altitude_ft is not None:
             normalized["altitude_ft"] = slots_payload.altitude_ft
+        if slots_payload.souls_on_board is not None:
+            normalized["souls_on_board"] = slots_payload.souls_on_board
+        if slots_payload.fuel_endurance_minutes is not None:
+            normalized["fuel_endurance_minutes"] = slots_payload.fuel_endurance_minutes
 
-    normalized.setdefault("instruction_code", "takeoff_clearance")
+    instruction_codes: list[str] = []
+    default_instruction_codes: list[str] = []
+    defaults_seq = scenario_defaults.get("instruction_codes")
+    if isinstance(defaults_seq, Sequence):
+        default_instruction_codes = [
+            str(code) for code in defaults_seq if str(code)
+        ]
+
+    if slots_payload:
+        if slots_payload.instruction_codes:
+            instruction_codes.extend(slots_payload.instruction_codes)
+        if slots_payload.instruction_code:
+            instruction_codes.append(slots_payload.instruction_code)
+    if not instruction_codes:
+        instruction_codes.extend(default_instruction_codes)
+
+    readback_cfg = scenario_defaults.get("readback")
+    if readback_cfg and active_frequency_group == "ground":
+        readback_complete, missing_items = _evaluate_readback(transcript, readback_cfg)
+        if readback_complete:
+            instruction_codes = ["acknowledge"]
+            warnings.append("readback_confirmed")
+        else:
+            joined_missing = ", ".join(missing_items)
+            normalized["missing_readback_items"] = joined_missing
+            reissue_codes = default_instruction_codes or instruction_codes
+            instruction_codes = ["readback_correction"] + reissue_codes
+            warnings.append("readback_incomplete")
+
+    if instruction_codes:
+        unique_codes: list[str] = []
+        seen_codes: set[str] = set()
+        for code in instruction_codes:
+            code_str = str(code)
+            if code_str and code_str not in seen_codes:
+                seen_codes.add(code_str)
+                unique_codes.append(code_str)
+        if unique_codes:
+            normalized["instruction_codes"] = unique_codes
+
+    wind_direction = (
+        (slots_payload.wind_direction if slots_payload else None)
+        or scenario_defaults.get("wind_direction")
+    )
+    wind_speed = (
+        (slots_payload.wind_speed if slots_payload else None)
+        or scenario_defaults.get("wind_speed")
+    )
+    wind_report = (
+        (slots_payload.wind_report if slots_payload else None)
+        or scenario_defaults.get("wind_report")
+        or _format_wind_report(wind_direction, wind_speed)
+    )
+    if wind_direction is not None:
+        normalized["wind_direction"] = wind_direction
+    if wind_speed is not None:
+        normalized["wind_speed"] = wind_speed
+    if wind_report:
+        normalized["wind_report"] = wind_report
+
+    qnh_value = (
+        (slots_payload.qnh_value if slots_payload else None)
+        or scenario_defaults.get("qnh")
+    )
+    if qnh_value:
+        normalized["qnh_value"] = qnh_value
+
+    squawk_code = (
+        (slots_payload.squawk_code if slots_payload else None)
+        or scenario_defaults.get("squawk")
+    )
+    if squawk_code:
+        normalized["squawk_code"] = squawk_code
+
+    taxi_route = (
+        (slots_payload.taxi_route if slots_payload else None)
+        or scenario_defaults.get("taxi_route")
+    )
+    if taxi_route:
+        normalized["taxi_route"] = taxi_route
+
+    advisory_text = (
+        (slots_payload.advisory_text if slots_payload else None)
+        or scenario_defaults.get("advisory")
+    )
+    if advisory_text:
+        normalized["advisory_text"] = advisory_text
+
+    climb_instruction = (
+        (slots_payload.climb_instruction if slots_payload else None)
+        or scenario_defaults.get("climb_instruction")
+    )
+    if climb_instruction:
+        normalized["climb_instruction"] = climb_instruction
+
+    report_altitude_ft = (
+        (slots_payload.report_altitude_ft if slots_payload else None)
+        or scenario_defaults.get("report_altitude_ft")
+    )
+    report_altitude_phrase = None
+    if report_altitude_ft:
+        report_altitude_phrase = _format_altitude_phrase(report_altitude_ft)
+        normalized["report_altitude_ft"] = report_altitude_ft
+    if report_altitude_phrase:
+        normalized["report_altitude_phrase"] = report_altitude_phrase
+
+    next_frequency_phrase = (
+        (slots_payload.next_frequency_phrase if slots_payload else None)
+        or scenario_defaults.get("next_frequency")
+    )
+    if next_frequency_phrase:
+        normalized["next_frequency_phrase"] = next_frequency_phrase
+
+    default_instruction = scenario_defaults.get("default_instruction_code")
+    normalized.setdefault(
+        "instruction_code",
+        default_instruction if isinstance(default_instruction, str) else "takeoff_clearance",
+    )
 
     logger.info("Slots normalizados: %s", normalized)
 
@@ -628,6 +866,77 @@ def _build_default_phrase(slots: Mapping[str, Any]) -> str:
     )
     runway_human = slots.get("runway_human") or "uno cero"
     return f"{callsign_spelled}, autorizado a despegar pista {runway_human}"
+
+
+def _evaluate_readback(
+    transcript: str,
+    config: Mapping[str, Any],
+) -> tuple[bool, list[str]]:
+    required_sets = config.get("required") or []
+    if not required_sets:
+        return True, []
+
+    text_lower = transcript.lower()
+    text_compact = re.sub(r"\s+", "", text_lower)
+    missing: list[str] = []
+
+    for requirement in required_sets:
+        if isinstance(requirement, str):
+            options = [requirement]
+        else:
+            options = [
+                str(option) for option in requirement if option is not None
+            ]
+        if not options:
+            continue
+
+        matched = False
+        for option in options:
+            option_norm = option.lower().strip()
+            if not option_norm:
+                continue
+            if option_norm in text_lower:
+                matched = True
+                break
+            option_compact = re.sub(r"\s+", "", option_norm)
+            if option_compact and option_compact in text_compact:
+                matched = True
+                break
+        if not matched:
+            missing.append(options[0])
+
+    return len(missing) == 0, missing
+
+
+def _format_wind_report(direction: int | str | None, speed: int | str | None) -> str | None:
+    if direction is None and speed is None:
+        return None
+    direction_str: str | None
+    speed_str: str | None
+    if isinstance(direction, int):
+        direction_str = f"{direction:03d}"
+    else:
+        direction_str = str(direction).strip() if direction is not None else None
+    if isinstance(speed, int):
+        speed_str = f"{speed:02d}"
+    else:
+        speed_str = str(speed).strip() if speed is not None else None
+    if not direction_str and not speed_str:
+        return None
+    if direction_str and speed_str:
+        return f"{direction_str}/{speed_str}"
+    return direction_str or speed_str
+
+
+def _format_altitude_phrase(value: int | str | None) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value_str = value.strip()
+        if value_str:
+            return value_str
+        return None
+    return f"{value} pies"
 
 
 def _extract_callsign(transcript: str) -> str | None:

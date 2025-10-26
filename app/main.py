@@ -70,6 +70,22 @@ def _configure_logging() -> None:
     pipeline_logger.addHandler(pipeline_handler)
     pipeline_logger.setLevel(logging.INFO)
 
+    transcript_log_path = Path(getattr(settings, "transcript_log_file", "logs/transcripts.log"))
+    transcript_log_path.parent.mkdir(parents=True, exist_ok=True)
+    transcript_handler = RotatingFileHandler(
+        transcript_log_path,
+        maxBytes=500_000,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    transcript_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    )
+    transcript_logger = logging.getLogger("app.logs.transcript")
+    transcript_logger.handlers.clear()
+    transcript_logger.addHandler(transcript_handler)
+    transcript_logger.setLevel(logging.INFO)
+
     noisy_loggers = [
         "botocore",
         "boto3",

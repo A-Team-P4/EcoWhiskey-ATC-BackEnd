@@ -10,14 +10,24 @@
       "callsign",
       "instruction_code",
       "instruction",
-      "instruction_text"
+      "instruction_text",
+      "instruction_codes",
+      "wind_report",
+      "climb_instruction",
+      "report_altitude_phrase",
+      "next_frequency_phrase"
     ]
   },
   "render": {
     "spanish": "{callsign_spelled}, {instruction_text}",
     "instruction_map": {
-      "takeoff_clearance": "autorizado a despegar pista {runway_human}",
-      "line_up_wait": "ruede a posición y mantenga pista {runway_human}"
+      "wind_report": "Viento {wind_report}.",
+      "hold_short": "Mantenga fuera de pista.",
+      "line_up_wait": "Ruede a posición y mantenga pista {runway_human}.",
+      "takeoff_clearance": "Autorizado a despegar pista {runway_human}.",
+      "maintain_heading": "{climb_instruction}.",
+      "report_altitude": "Notifique pasando {report_altitude_phrase}.",
+      "contact_next_frequency": "Contacte {next_frequency_phrase}."
     },
     "default_instruction_code": "takeoff_clearance"
   },

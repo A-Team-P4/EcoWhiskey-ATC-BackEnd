@@ -17,6 +17,27 @@ class SlotsPayload(BaseModel):
     instruction: Optional[str] = Field(default=None)
     heading: Optional[int] = Field(default=None)
     altitude_ft: Optional[int] = Field(default=None, alias="altitudeFt")
+    instruction_codes: Optional[List[str]] = Field(
+        default=None, alias="instructionCodes"
+    )
+    wind_direction: Optional[int] = Field(default=None, alias="windDirection")
+    wind_speed: Optional[int] = Field(default=None, alias="windSpeed")
+    wind_report: Optional[str] = Field(default=None, alias="windReport")
+    qnh_value: Optional[str] = Field(default=None, alias="qnhValue")
+    squawk_code: Optional[str] = Field(default=None, alias="squawkCode")
+    taxi_route: Optional[str] = Field(default=None, alias="taxiRoute")
+    advisory_text: Optional[str] = Field(default=None, alias="advisoryText")
+    climb_instruction: Optional[str] = Field(default=None, alias="climbInstruction")
+    report_altitude_ft: Optional[int] = Field(
+        default=None, alias="reportAltitudeFt"
+    )
+    next_frequency_phrase: Optional[str] = Field(
+        default=None, alias="nextFrequencyPhrase"
+    )
+    souls_on_board: Optional[int] = Field(default=None, alias="soulsOnBoard")
+    fuel_endurance_minutes: Optional[int] = Field(
+        default=None, alias="fuelEnduranceMinutes"
+    )
 
     model_config = {"populate_by_name": True, "extra": "allow"}
 

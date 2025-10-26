@@ -658,7 +658,7 @@ class ApiTester(tk.Tk):
         def task() -> None:
             self.log(f"Downloading audio from {self.last_audio_url}")
             try:
-                resp = self.session.get(self.last_audio_url, timeout=60)
+                resp = self.session.get(self.last_audio_url, timeout=6000)
                 resp.raise_for_status()
             except RequestException as exc:
                 self.log(f"Failed to fetch audio: {exc}")

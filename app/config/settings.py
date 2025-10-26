@@ -142,6 +142,7 @@ class Settings(BaseSettings):
     port: int = 8000
     log_file: str = "logs/app.log"
     audio_log_file: str = "logs/audio_pipeline.log"
+    transcript_log_file: str = "logs/transcripts.log"
 
     # Database
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)

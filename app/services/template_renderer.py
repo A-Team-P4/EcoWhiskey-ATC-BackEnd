@@ -7,6 +7,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -102,15 +103,30 @@ class TemplateRenderer:
             render_data.get("default_instruction_code"),
         )
         instruction_text = None
-        if instruction_code and instruction_map:
+        collected_segments: list[str] = []
+        instruction_codes = render_payload.get("instruction_codes")
+        if instruction_codes and instruction_map:
+            for code in instruction_codes:
+                template_text = instruction_map.get(code)
+                if not template_text:
+                    continue
+                try:
+                    collected_segments.append(template_text.format(**render_payload))
+                except KeyError as exc:
+                    raise TemplateRenderError(
+                        f"Slot faltante en instruction_map '{code}': {exc}"
+                    ) from exc
+        if not collected_segments and instruction_code and instruction_map:
             template_text = instruction_map.get(instruction_code)
             if template_text:
                 try:
-                    instruction_text = template_text.format(**render_payload)
+                    collected_segments.append(template_text.format(**render_payload))
                 except KeyError as exc:
                     raise TemplateRenderError(
                         f"Slot faltante en instruction_map '{instruction_code}': {exc}"
                     ) from exc
+        if collected_segments:
+            instruction_text = " ".join(segment.strip() for segment in collected_segments if segment.strip())
         if instruction_text:
             render_payload.setdefault("instruction_text", instruction_text)
 
@@ -126,6 +142,7 @@ class TemplateRenderer:
             raise TemplateRenderError(
                 f"Slot faltante en plantilla '{template_id}': {exc}"
             ) from exc
+        text = re.sub(r"\s{2,}", " ", text).strip()
 
         metadata = template.data.get("metadata", {})
 

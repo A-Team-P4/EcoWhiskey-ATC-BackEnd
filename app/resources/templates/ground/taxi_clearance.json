@@ -9,14 +9,27 @@
     "optional": [
       "taxi_route",
       "instruction_code",
-      "instruction_text"
+      "instruction_text",
+      "instruction_codes",
+      "wind_report",
+      "squawk_code",
+      "qnh_value",
+      "advisory_text",
+      "missing_readback_items"
     ]
   },
   "render": {
     "spanish": "{callsign_spelled}, {instruction_text}",
     "instruction_map": {
-      "taxi_clearance": "ruede vía {taxi_route} al punto de espera pista {runway_human}",
-      "hold_short": "mantenga posición antes de la pista {runway_human}"
+      "acknowledge": "recibido.",
+      "runway_in_use": "Pista en uso {runway_human}.",
+      "wind_report": "Viento {wind_report}.",
+      "squawk_assignment": "Transponder {squawk_code}.",
+      "qnh_assignment": "QNH {qnh_value}.",
+      "taxi_clearance": "Ruede vía {taxi_route} al punto de espera pista {runway_human}.",
+      "advise_ready": "{advisory_text}",
+      "hold_short": "Mantenga posición antes de la pista {runway_human}.",
+      "readback_correction": "Corrija colación: falta {missing_readback_items}."
     },
     "default_instruction_code": "taxi_clearance"
   },
