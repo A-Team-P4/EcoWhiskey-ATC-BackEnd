@@ -54,10 +54,57 @@ RECORD_SAMPLE_RATE = 16_000
 RECORD_CHANNELS = 1
 
 
+AIRPORTS = [
+    ("MROC", "MROC - Juan Santamaría Intl. (San José / Alajuela)"),
+    ("MRLB", "MRLB - Daniel Oduber Intl. (Liberia)"),
+    ("MRLM", "MRLM - Limón Intl. (Limón)"),
+    ("MRPM", "MRPM - Palmar Sur (Osa)"),
+    ("MRPV", "MRPV - Tobías Bolaños Intl. (Pavas, San José)"),
+    ("MRSV", "MRSV - San Vito"),
+    ("MRNS", "MRNS - Nosara"),
+    ("MRTR", "MRTR - Tambor"),
+    ("MRAO", "MRAO - Arenal/La Fortuna"),
+    ("MRCR", "MRCR - Carrillo (Playa Sámara)"),
+    ("MRDK", "MRDK - Drake Bay"),
+    ("MRGF", "MRGF - Golfito"),
+    ("MRPJ", "MRPJ - Puerto Jiménez"),
+    ("MRQP", "MRQP - Quepos / La Managua"),
+    ("MRSO", "MRSO - Sámara"),
+]
+
+CONDITIONS = ["VMC", "IMC"]
+VISIBILITY = [">10km", "10km", "5km", "3km", "1km", "<1km"]
+OBJECTIVES = [
+    ("practice_taxi", "Practicar taxi"),
+    ("phraseology_focus", "Énfasis en fraseología"),
+    ("altimeter_use", "Uso correcto de altímetro"),
+    ("circuit_traffic", "Tráfico de circuito"),
+    ("controlled_airfield_ops", "Entrada y salida de aeródromo controlado"),
+    ("emergency_management", "Gestión de emergencias"),
+]
+
+QNH_VALUES = [str(980 + i) for i in range(71)]
+WIND_DIRECTIONS = [f"{i:03d}" for i in range(0, 360, 10)]
+WIND_SPEEDS = [str(i) for i in range(0, 51)]
+
+AIRPORT_LABELS = [label for _, label in AIRPORTS]
+AIRPORT_LABEL_TO_CODE = {label: code for code, label in AIRPORTS}
+OBJECTIVE_LABELS = [label for _, label in OBJECTIVES]
+
+
+def extract_airport_code(selection: str) -> str:
+    if not selection:
+        return ""
+    if selection in AIRPORT_LABEL_TO_CODE:
+        return AIRPORT_LABEL_TO_CODE[selection]
+    return selection.split(" ", 1)[0].strip()
+
+
 @dataclass
 class SessionState:
     base_url: str = DEFAULT_BASE_URL.rstrip("/")
     token: Optional[str] = os.getenv("API_BEARER_TOKEN")
+    training_session_id: Optional[str] = os.getenv("TRAINING_SESSION_ID")
 
     def auth_headers(self) -> dict[str, str]:
         if not self.token:
@@ -75,6 +122,8 @@ class ApiTester(tk.Tk):
         self.session: Session = requests.Session()
 
         self.last_audio_url: Optional[str] = None
+        self.last_training_session_id: Optional[str] = None
+        self.last_training_context: Optional[dict[str, Any]] = None
 
         # Recording state
         self.is_recording = False
@@ -85,10 +134,14 @@ class ApiTester(tk.Tk):
         self._temp_files: set[Path] = set()
 
         self._build_ui()
+        if self.state.training_session_id:
+            self._set_training_session(self.state.training_session_id, log_action=False)
         self.protocol("WM_DELETE_WINDOW", self._on_app_close)
         self.log(f"UI ready. Using API base URL: {self.state.base_url}")
         if self.state.token:
             self.log("Bearer token loaded from environment.")
+        if self.state.training_session_id:
+            self.log(f"Training session loaded: {self.state.training_session_id}")
 
     # --- UI construction -------------------------------------------------
 
@@ -141,11 +194,42 @@ class ApiTester(tk.Tk):
             width=10,
         ).grid(row=1, column=4, padx=6, pady=6, sticky="w")
 
+        ttk.Label(config_frame, text="Training Session ID").grid(
+            row=2, column=0, padx=6, pady=6
+        )
+        self.training_session_input_var = tk.StringVar(
+            value=self.state.training_session_id or ""
+        )
+        self.training_session_entry = ttk.Entry(
+            config_frame,
+            textvariable=self.training_session_input_var,
+        )
+        self.training_session_entry.grid(row=2, column=1, sticky="ew", padx=(0, 6), pady=6)
+        ttk.Button(
+            config_frame,
+            text="Apply",
+            command=self._apply_training_session,
+            width=10,
+        ).grid(row=2, column=2, padx=6, pady=6, sticky="w")
+        ttk.Button(
+            config_frame,
+            text="Generate",
+            command=self._generate_training_session,
+            width=10,
+        ).grid(row=2, column=3, padx=(0, 6), pady=6, sticky="w")
+        ttk.Button(
+            config_frame,
+            text="Clear",
+            command=lambda: self._set_training_session(None),
+            width=10,
+        ).grid(row=2, column=4, padx=6, pady=6, sticky="w")
+
         self.notebook = ttk.Notebook(self)
         self.notebook.grid(row=1, column=0, sticky="nsew", padx=12, pady=6)
 
         self._build_register_tab()
         self._build_login_tab()
+        self._build_training_tab()
         self._build_audio_tab()
 
         console_frame = ttk.LabelFrame(self, text="Console Output")
@@ -248,6 +332,159 @@ class ApiTester(tk.Tk):
             width=18,
         ).grid(row=2, column=1, padx=8, pady=(12, 6), sticky="e")
 
+    def _build_training_tab(self) -> None:
+        frame = ttk.Frame(self.notebook)
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(2, weight=1)
+        frame.rowconfigure(5, weight=1)
+        self.notebook.add(frame, text="Training Context")
+
+        self.train_departure_var = tk.StringVar()
+        self.train_arrival_var = tk.StringVar()
+        self.train_condition_var = tk.StringVar(value=CONDITIONS[0])
+        self.train_visibility_var = tk.StringVar(value=VISIBILITY[0])
+        default_qnh = "1013" if "1013" in QNH_VALUES else QNH_VALUES[0]
+        self.train_qnh_var = tk.StringVar(value=default_qnh)
+        self.train_wind_direction_var = tk.StringVar(value=WIND_DIRECTIONS[0])
+        self.train_wind_speed_var = tk.StringVar(value=WIND_SPEEDS[0])
+
+        self.training_route_display_var = tk.StringVar(value="Route: —")
+        self.training_status_var = tk.StringVar(value="Configure fields and submit.")
+        self.training_session_label_var = tk.StringVar(value="Last session: —")
+
+        ttk.Label(frame, text="Route", font=("TkDefaultFont", 12, "bold")).grid(
+            row=0, column=0, columnspan=3, padx=8, pady=(10, 4), sticky="w"
+        )
+
+        route_frame = ttk.Frame(frame)
+        route_frame.grid(row=1, column=0, columnspan=3, sticky="ew", padx=8)
+        route_frame.columnconfigure(0, weight=1)
+        route_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(route_frame, text="Departure").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.train_departure_combo = ttk.Combobox(
+            route_frame,
+            values=AIRPORT_LABELS,
+            textvariable=self.train_departure_var,
+            state="readonly",
+        )
+        self.train_departure_combo.grid(row=1, column=0, sticky="ew", padx=(0, 4))
+
+        ttk.Label(route_frame, text="Arrival").grid(row=0, column=1, sticky="w", pady=(0, 4))
+        self.train_arrival_combo = ttk.Combobox(
+            route_frame,
+            values=AIRPORT_LABELS,
+            textvariable=self.train_arrival_var,
+            state="readonly",
+        )
+        self.train_arrival_combo.grid(row=1, column=1, sticky="ew", padx=(4, 0))
+
+        ttk.Label(frame, textvariable=self.training_route_display_var).grid(
+            row=2, column=0, columnspan=3, padx=8, pady=(4, 12), sticky="w"
+        )
+
+        ttk.Label(frame, text="Meteorological Conditions", font=("TkDefaultFont", 12, "bold")).grid(
+            row=3, column=0, columnspan=3, padx=8, pady=(0, 4), sticky="w"
+        )
+
+        meteo_frame = ttk.Frame(frame)
+        meteo_frame.grid(row=4, column=0, columnspan=3, sticky="ew", padx=8)
+        for col in range(3):
+            meteo_frame.columnconfigure(col, weight=1)
+
+        ttk.Label(meteo_frame, text="Condition").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        ttk.Combobox(
+            meteo_frame,
+            values=CONDITIONS,
+            textvariable=self.train_condition_var,
+            state="readonly",
+        ).grid(row=1, column=0, sticky="ew", padx=(0, 4))
+
+        ttk.Label(meteo_frame, text="Visibility").grid(row=0, column=1, sticky="w", pady=(0, 4))
+        ttk.Combobox(
+            meteo_frame,
+            values=VISIBILITY,
+            textvariable=self.train_visibility_var,
+            state="readonly",
+        ).grid(row=1, column=1, sticky="ew", padx=4)
+
+        ttk.Label(meteo_frame, text="QNH (hPa)").grid(row=0, column=2, sticky="w", pady=(0, 4))
+        ttk.Combobox(
+            meteo_frame,
+            values=QNH_VALUES,
+            textvariable=self.train_qnh_var,
+            state="readonly",
+        ).grid(row=1, column=2, sticky="ew", padx=(4, 0))
+
+        ttk.Label(meteo_frame, text="Wind Direction").grid(row=2, column=0, sticky="w", pady=(12, 4))
+        ttk.Combobox(
+            meteo_frame,
+            values=WIND_DIRECTIONS,
+            textvariable=self.train_wind_direction_var,
+            state="readonly",
+        ).grid(row=3, column=0, sticky="ew", padx=(0, 4))
+
+        ttk.Label(meteo_frame, text="Wind Speed (kt)").grid(row=2, column=1, sticky="w", pady=(12, 4))
+        ttk.Combobox(
+            meteo_frame,
+            values=WIND_SPEEDS,
+            textvariable=self.train_wind_speed_var,
+            state="readonly",
+        ).grid(row=3, column=1, sticky="ew", padx=4)
+
+        ttk.Label(meteo_frame, text="Wind Summary").grid(row=2, column=2, sticky="w", pady=(12, 4))
+        self.wind_summary_var = tk.StringVar(value=f"{self.train_wind_direction_var.get()}/{self.train_wind_speed_var.get()}")
+        ttk.Label(meteo_frame, textvariable=self.wind_summary_var).grid(
+            row=3, column=2, sticky="w", padx=(4, 0)
+        )
+
+        objectives_frame = ttk.LabelFrame(frame, text="Training Objectives")
+        objectives_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", padx=8, pady=(12, 8))
+        objectives_frame.columnconfigure(0, weight=1)
+        objectives_frame.rowconfigure(1, weight=1)
+
+        ttk.Label(objectives_frame, text="Select one or more objectives").grid(
+            row=0, column=0, sticky="w", padx=6, pady=(6, 2)
+        )
+
+        self.objectives_listbox = tk.Listbox(
+            objectives_frame,
+            selectmode=tk.MULTIPLE,
+            height=min(8, len(OBJECTIVES)),
+            exportselection=False,
+        )
+        for label in OBJECTIVE_LABELS:
+            self.objectives_listbox.insert(tk.END, label)
+        self.objectives_listbox.grid(row=1, column=0, sticky="nsew", padx=(6, 0), pady=(0, 6))
+
+        scrollbar = ttk.Scrollbar(
+            objectives_frame, orient="vertical", command=self.objectives_listbox.yview
+        )
+        scrollbar.grid(row=1, column=1, sticky="ns", padx=(0, 6), pady=(0, 6))
+        self.objectives_listbox.configure(yscrollcommand=scrollbar.set)
+
+        ttk.Button(
+            frame,
+            text="Create Training Context",
+            command=self._on_create_training_context,
+            width=24,
+        ).grid(row=6, column=0, columnspan=3, padx=8, pady=(8, 4))
+
+        ttk.Label(frame, textvariable=self.training_status_var).grid(
+            row=7, column=0, columnspan=3, padx=8, pady=(0, 2), sticky="w"
+        )
+        ttk.Label(frame, textvariable=self.training_session_label_var).grid(
+            row=8, column=0, columnspan=3, padx=8, pady=(0, 12), sticky="w"
+        )
+
+        self.train_departure_var.trace_add("write", self._update_training_route_display)
+        self.train_arrival_var.trace_add("write", self._update_training_route_display)
+        self.train_wind_direction_var.trace_add("write", self._update_wind_summary)
+        self.train_wind_speed_var.trace_add("write", self._update_wind_summary)
+        self._update_training_route_display()
+        self._update_wind_summary()
+
     def _build_audio_tab(self) -> None:
         frame = ttk.Frame(self.notebook)
         frame.columnconfigure(1, weight=1)
@@ -256,14 +493,16 @@ class ApiTester(tk.Tk):
         ttk.Label(frame, text="Session ID").grid(
             row=0, column=0, padx=8, pady=6, sticky="w"
         )
-        self.audio_session_id = tk.StringVar(value=str(uuid.uuid4()))
+        self.audio_session_id = tk.StringVar(
+            value=self.state.training_session_id or str(uuid.uuid4())
+        )
         ttk.Entry(frame, textvariable=self.audio_session_id).grid(
             row=0, column=1, sticky="ew", padx=(0, 8), pady=6
         )
         ttk.Button(
             frame,
             text="New UUID",
-            command=lambda: self.audio_session_id.set(str(uuid.uuid4())),
+            command=self._generate_training_session,
             width=12,
         ).grid(row=0, column=2, padx=6, pady=6)
 
@@ -359,6 +598,30 @@ class ApiTester(tk.Tk):
 
     # --- Event handlers --------------------------------------------------
 
+    def _update_training_route_display(self, *_args: Any) -> None:
+        if not hasattr(self, "training_route_display_var"):
+            return
+        departure_var = getattr(self, "train_departure_var", None)
+        arrival_var = getattr(self, "train_arrival_var", None)
+        departure = extract_airport_code(departure_var.get()) if departure_var else ""
+        arrival = extract_airport_code(arrival_var.get()) if arrival_var else ""
+        if departure and arrival:
+            self.training_route_display_var.set(f"Route: {departure} → {arrival}")
+        else:
+            self.training_route_display_var.set("Route: —")
+
+    def _update_wind_summary(self, *_args: Any) -> None:
+        if not hasattr(self, "wind_summary_var"):
+            return
+        direction_var = getattr(self, "train_wind_direction_var", None)
+        speed_var = getattr(self, "train_wind_speed_var", None)
+        direction = direction_var.get().strip() if direction_var else ""
+        speed = speed_var.get().strip() if speed_var else ""
+        if direction and speed:
+            self.wind_summary_var.set(f"{direction}/{speed}")
+        else:
+            self.wind_summary_var.set("—")
+
     def _update_base_url(self) -> None:
         new_url = self.base_url_var.get().strip().rstrip("/")
         if not new_url:
@@ -376,6 +639,51 @@ class ApiTester(tk.Tk):
     def _toggle_token_visibility(self) -> None:
         current = self.token_entry.cget("show")
         self.token_entry.configure(show="" if current else "•")
+
+    def _apply_training_session(self) -> None:
+        raw_value = self.training_session_input_var.get().strip()
+        if not raw_value:
+            self._set_training_session(None)
+            return
+        try:
+            normalized = str(uuid.UUID(raw_value))
+        except ValueError:
+            messagebox.showerror(
+                "Invalid session ID", "Training session ID must be a valid UUID."
+            )
+            return
+        self._set_training_session(normalized)
+
+    def _generate_training_session(self) -> None:
+        self._set_training_session(str(uuid.uuid4()))
+
+    def _set_training_session(
+        self,
+        session_id: Optional[str],
+        *,
+        log_action: bool = True,
+    ) -> None:
+        value = str(session_id) if session_id else None
+        self.state.training_session_id = value
+        self.last_training_session_id = value
+        if hasattr(self, "training_session_input_var"):
+            self.training_session_input_var.set(value or "")
+        if value and hasattr(self, "audio_session_id"):
+            self.audio_session_id.set(value)
+        elif value is None and log_action and hasattr(self, "audio_session_id"):
+            self.audio_session_id.set("")
+        if hasattr(self, "training_session_label_var"):
+            label = value or "—"
+            self.training_session_label_var.set(
+                f"Last session: {label}" if value else "Last session: —"
+            )
+        if value is None and log_action and hasattr(self, "training_status_var"):
+            self.training_status_var.set("Training session cleared.")
+        if log_action:
+            if value:
+                self.log(f"Training session set to {value}")
+            else:
+                self.log("Training session cleared.")
 
     def _handle_account_type_change(self, *_args: Any) -> None:
         account_type = (self.account_type_var.get() or "").lower()
@@ -474,6 +782,88 @@ class ApiTester(tk.Tk):
 
         self._run_async(task)
 
+    def _on_create_training_context(self) -> None:
+        departure = extract_airport_code(self.train_departure_var.get())
+        arrival = extract_airport_code(self.train_arrival_var.get())
+        if not departure or not arrival:
+            messagebox.showerror(
+                "Validation", "Select both departure and arrival airports."
+            )
+            return
+
+        route = f"{departure}-{arrival}"
+        meteo = {
+            "condition": self.train_condition_var.get().strip(),
+            "vis": self.train_visibility_var.get().strip(),
+            "qnh": self.train_qnh_var.get().strip(),
+            "windDirection": self.train_wind_direction_var.get().strip(),
+            "windSpeed": self.train_wind_speed_var.get().strip(),
+        }
+        if meteo["windDirection"] and meteo["windSpeed"]:
+            meteo["wind"] = f"{meteo['windDirection']}/{meteo['windSpeed']}"
+
+        selected_indices = self.objectives_listbox.curselection()
+        objectives = [OBJECTIVES[idx][0] for idx in selected_indices]
+
+        training_config = {
+            "route": route,
+            "meteo": meteo,
+            "objectives": objectives,
+        }
+
+        payload = {"context": training_config}
+
+        if hasattr(self, "training_status_var"):
+            self.training_status_var.set("Sending training context…")
+        self.log(
+            "Submitting training context:\n"
+            f"{json.dumps(training_config, indent=2)}"
+        )
+
+        def task() -> None:
+            resp = self._perform_request(
+                "Create training context",
+                "POST",
+                "/training_context",
+                json=payload,
+            )
+            if resp is not None:
+                self.after(
+                    0, lambda: self._record_training_context_success(training_config)
+                )
+            else:
+                self.after(0, self._mark_training_context_failure)
+
+        self._run_async(task)
+
+    def _record_training_context_success(self, training_config: dict[str, Any]) -> None:
+        self.last_training_context = training_config
+        if hasattr(self, "training_status_var"):
+            self.training_status_var.set("Training context submitted. Awaiting session ID…")
+
+    def _mark_training_context_failure(self) -> None:
+        if hasattr(self, "training_status_var"):
+            self.training_status_var.set("Training context creation failed.")
+
+    def _set_last_training_session(
+        self, session_id: Any, context: Optional[dict[str, Any]] = None
+    ) -> None:
+        session_str = str(session_id)
+        self._set_training_session(session_str, log_action=False)
+        if context:
+            self.last_training_context = context
+        if hasattr(self, "training_status_var"):
+            self.training_status_var.set("Training context saved successfully.")
+        self.log(f"Training session ready: {session_str}")
+        if context:
+            try:
+                self.log(
+                    "Context payload:\n"
+                    f"{json.dumps(context, indent=2)}"
+                )
+            except TypeError:
+                self.log("Context payload included non-serializable data.")
+
     def _on_audio_analyze(self) -> None:
         session_id = self.audio_session_id.get().strip()
         frequency = self.audio_frequency.get().strip()
@@ -488,6 +878,17 @@ class ApiTester(tk.Tk):
         if not audio_path.is_file():
             messagebox.showerror("Validation", "Audio file path is invalid.")
             return
+
+        try:
+            session_uuid = uuid.UUID(session_id)
+        except ValueError:
+            messagebox.showerror(
+                "Validation", "Session ID must be a valid UUID before uploading audio."
+            )
+            return
+
+        session_id = str(session_uuid)
+        self._set_training_session(session_id, log_action=False)
 
         def task() -> None:
             prepared = self._prepare_audio_for_upload(audio_path)
@@ -722,7 +1123,7 @@ class ApiTester(tk.Tk):
                 method=method.upper(),
                 url=url,
                 headers=headers if headers else None,
-                timeout=60,
+                timeout=6000,
                 **kwargs,
             )
         except RequestException as exc:
@@ -747,6 +1148,8 @@ class ApiTester(tk.Tk):
 
     def _log_response(self, label: str, response: Response) -> None:
         audio_url: Optional[str] = None
+        training_session_id: Optional[Any] = None
+        training_context_payload: Optional[dict[str, Any]] = None
         try:
             payload = response.json()
             if isinstance(payload, dict):
@@ -755,6 +1158,13 @@ class ApiTester(tk.Tk):
                     or payload.get("audioUrl")
                     or payload.get("audio-url")
                 )
+                training_session_id = (
+                    payload.get("trainingSessionId")
+                    or payload.get("training_session_id")
+                )
+                context_value = payload.get("context")
+                if isinstance(context_value, dict):
+                    training_context_payload = context_value
             body = json.dumps(payload, indent=2)
         except ValueError:
             payload = None
@@ -769,6 +1179,13 @@ class ApiTester(tk.Tk):
 
         if audio_url:
             self.after(0, lambda url=audio_url: self._set_last_audio_url(url))
+        if training_session_id is not None:
+            self.after(
+                0,
+                lambda sid=training_session_id, ctx=training_context_payload: self._set_last_training_session(
+                    sid, ctx
+                ),
+            )
 
     # ---------------------------------------------------------------------
 
