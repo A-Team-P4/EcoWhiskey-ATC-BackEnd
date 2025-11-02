@@ -3,60 +3,20 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
 
-class SlotsPayload(BaseModel):
-    callsign: Optional[str] = Field(default=None)
-    callsign_spelled: Optional[str] = Field(default=None)
-    runway: Optional[str] = Field(default=None)
-    runway_human: Optional[str] = Field(default=None)
-    instruction_code: Optional[str] = Field(default=None)
-    instruction: Optional[str] = Field(default=None)
-    heading: Optional[int] = Field(default=None)
-    altitude_ft: Optional[int] = Field(default=None, alias="altitudeFt")
-    instruction_codes: Optional[List[str]] = Field(
-        default=None, alias="instructionCodes"
-    )
-    wind_direction: Optional[int] = Field(default=None, alias="windDirection")
-    wind_speed: Optional[int] = Field(default=None, alias="windSpeed")
-    wind_report: Optional[str] = Field(default=None, alias="windReport")
-    qnh_value: Optional[str] = Field(default=None, alias="qnhValue")
-    squawk_code: Optional[str] = Field(default=None, alias="squawkCode")
-    taxi_route: Optional[str] = Field(default=None, alias="taxiRoute")
-    advisory_text: Optional[str] = Field(default=None, alias="advisoryText")
-    climb_instruction: Optional[str] = Field(default=None, alias="climbInstruction")
-    report_altitude_ft: Optional[int] = Field(
-        default=None, alias="reportAltitudeFt"
-    )
-    next_frequency_phrase: Optional[str] = Field(
-        default=None, alias="nextFrequencyPhrase"
-    )
-    souls_on_board: Optional[int] = Field(default=None, alias="soulsOnBoard")
-    fuel_endurance_minutes: Optional[int] = Field(
-        default=None, alias="fuelEnduranceMinutes"
-    )
-
-    model_config = {"populate_by_name": True, "extra": "allow"}
-
-
-class NotesPayload(BaseModel):
-    observations: List[str] = Field(default_factory=list)
-    missing_information: List[str] = Field(
-        default_factory=list, alias="missingInformation"
-    )
-    frequency_group: Optional[str] = Field(default=None, alias="frequencyGroup")
-
-    model_config = {"populate_by_name": True, "extra": "allow"}
-
-
 class StructuredLlmResponse(BaseModel):
     intent: str
+    allow_response: bool = Field(alias="allowResponse")
+    controller_text: Optional[str] = Field(default=None, alias="controllerText")
+    feedback_text: str = Field(alias="feedback")
     confidence: Optional[float] = None
-    slots: SlotsPayload
-    notes: Optional[NotesPayload] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    model_config = {"populate_by_name": True, "extra": "allow"}
 
     @model_validator(mode="after")
     def normalize_confidence(cls, values: "StructuredLlmResponse") -> "StructuredLlmResponse":
