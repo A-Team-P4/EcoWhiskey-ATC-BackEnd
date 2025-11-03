@@ -1,7 +1,7 @@
 from typing import Optional
 from urllib.parse import quote_plus
 
-from pydantic import AliasChoices, Field, SecretStr
+from pydantic import AliasChoices, EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -94,6 +94,31 @@ class SecurityConfig(BaseSettings):
     )
 
 
+class MailConfig(BaseSettings):
+    """SMTP configuration for transactional email delivery."""
+
+    host: str | None = Field(default=None, validation_alias="SMTP_HOST")
+    port: int = Field(default=587, validation_alias="SMTP_PORT")
+    username: str | None = Field(default=None, validation_alias="SMTP_USERNAME")
+    password: SecretStr | None = Field(default=None, validation_alias="SMTP_PASSWORD")
+    sender: EmailStr | None = Field(default=None, validation_alias="SMTP_SENDER")
+    use_tls: bool = Field(default=True, validation_alias=AliasChoices("SMTP_USE_TLS", "SMTP_TLS"))
+    use_ssl: bool = Field(default=False, validation_alias=AliasChoices("SMTP_USE_SSL", "SMTP_SSL"))
+
+    model_config = SettingsConfigDict(
+        env_prefix="",
+        env_file=".env",
+        secrets_dir=".secrets",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    def is_configured(self) -> bool:
+        """Return True when enough settings are present to send email."""
+
+        return bool(self.host and self.sender)
+
+
 class Settings(BaseSettings):
     """Application settings"""
 
@@ -114,6 +139,9 @@ class Settings(BaseSettings):
 
     # Security
     security: SecurityConfig = Field(default_factory=SecurityConfig)
+
+    # Mail
+    mail: MailConfig = Field(default_factory=MailConfig)
 
     # CORS
     cors_origins: list[str] = ["*"]

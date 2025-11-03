@@ -6,6 +6,8 @@ import base64
 import hashlib
 import hmac
 import os
+import secrets
+import string
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -17,6 +19,8 @@ from app.models.user import User
 
 _SALT_BYTES = 16
 _ITERATIONS = 120_000
+_TEMP_PASSWORD_MIN_LENGTH = 8
+_TEMP_PASSWORD_CHARSET = string.ascii_letters + string.digits
 
 
 def hash_password(password: str) -> str:
@@ -49,6 +53,24 @@ def verify_password(password: str, hashed: str) -> bool:
         _ITERATIONS,
     )
     return hmac.compare_digest(candidate, stored)
+
+
+def generate_temporary_password(length: int = 12) -> str:
+    """Create a temporary password complying with basic complexity rules."""
+
+    if length < _TEMP_PASSWORD_MIN_LENGTH:
+        raise ValueError("Temporary password must be at least 8 characters long.")
+
+    while True:
+        candidate = "".join(
+            secrets.choice(_TEMP_PASSWORD_CHARSET) for _ in range(length)
+        )
+        if (
+            any(c.islower() for c in candidate)
+            and any(c.isupper() for c in candidate)
+            and any(c.isdigit() for c in candidate)
+        ):
+            return candidate
 
 
 class AuthenticationError(Exception):
@@ -109,6 +131,7 @@ def decode_access_token(token: str) -> TokenPayload:
 __all__ = [
     "hash_password",
     "verify_password",
+    "generate_temporary_password",
     "create_access_token",
     "decode_access_token",
     "AuthenticationError",

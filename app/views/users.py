@@ -348,3 +348,4 @@ class UserChangePasswordRequest(BaseModel):
         if self.currentPassword == self.newPassword:
             raise ValueError("New password must be different from the current one")
         return self
+

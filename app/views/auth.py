@@ -31,5 +31,21 @@ class TokenResponse(BaseModel):
         serialization_alias="school",
     )
 
+class ForgotPasswordRequest(BaseModel):
+    """Request payload for password recovery."""
 
-__all__ = ["LoginRequest", "TokenResponse"]
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    """Response payload for password recovery attempts."""
+
+    exists: bool
+    message: str
+
+__all__ = [
+    "LoginRequest",
+    "TokenResponse",
+    "ForgotPasswordRequest",
+    "ForgotPasswordResponse",
+]
