@@ -1,0 +1,151 @@
+{
+  "id": "mrpv_vfr_departure",
+  "display_name": "MRPV VFR salida Zona Eco",
+  "airport": "MRPV",
+  "default_phase": "ground_departure_request",
+  "frequencies": {
+    "ground": "121.7",
+    "tower": "118.3"
+  },
+  "shared": {
+    "student": {
+      "callsign": "ANI",
+      "callsign_spelled": "Alfa Noviembre India",
+      "hangar": "37",
+      "souls_on_board": 2,
+      "fuel_endurance_minutes": 210,
+      "captain": "Salas",
+      "route": "Zona Eco vía paso de Ochomogo",
+      "requested_altitude_ft": 7000
+    }
+  },
+  "phases": [
+    {
+      "id": "ground_departure_request",
+      "name": "Solicitud de apertura de plan de vuelo",
+      "frequency": "ground",
+      "intent": "ground_taxi_clearance",
+      "transitions": {
+        "onSuccess": "ground_readback"
+      },
+      "llm": {
+        "role": "Eres un controlador de superficie en Costa Rica (Pavas Superficie 121.7). Evalúas la llamada inicial de apertura de plan VFR y decides si emites la autorización.",
+        "studentChecklist": [
+          "Destinatario correcto (Pavas Superficie / frecuencia 121.7)",
+          "Identificador y ubicación de la aeronave (ANI en hangar 37)",
+          "Ruta solicitada, punto de paso y altitud (Zona Eco vía Ochomogo, 7000 pies)",
+          "Personas a bordo y capitán al mando",
+          "Autonomía de combustible"
+        ],
+        "controllerChecklist": [
+          "Confirmar recepción y datos clave",
+          "Indicar pista activa, viento, QNH y transponder",
+          "Asignar ruta de rodaje y recordar 'Avise listo'",
+          "Anticipar el readback esperado"
+        ],
+        "allowResponseRules": [
+          "Autoriza solo cuando todos los datos críticos estén presentes y coherentes.",
+          "Si falta algo, responde con allowResponse=false y explica en feedback qué elementos faltan."
+        ],
+        "feedbackGuidance": [
+          "Enumera datos faltantes o incorrectos usando frases cortas.",
+          "Refuerza cuando la estructura y fraseología son correctas.",
+          "Si todo está correcto, sugiere en feedback: 'Llamada correcta.'"
+        ],
+        "notes": "Usa la información del escenario para generar la autorización con fraseología ATC costarricense."
+      },
+      "data": {
+        "controller_callsign": "Pavas Superficie",
+        "runway": "10",
+        "runway_human": "uno cero",
+        "wind_direction": 70,
+        "wind_speed": 12,
+        "qnh": "3005",
+        "squawk": "0522",
+        "taxi_route": "Alfa 2, Alfa",
+        "advisory": "Avise listo"
+      }
+    },
+    {
+      "id": "ground_readback",
+      "name": "Readback de autorización de taxi",
+      "frequency": "ground",
+      "intent": "ground_taxi_readback",
+      "transitions": {
+        "onSuccess": "tower_ready"
+      },
+      "llm": {
+        "role": "Sigues siendo Pavas Superficie en 121.7. Evalúas el readback del alumno tras la autorización de taxi.",
+        "studentChecklist": [
+          "Repite QNH asignado.",
+          "Repite transponder asignado.",
+          "Confirma ruta de rodaje y pista.",
+          "Cierra con identificador correcto."
+        ],
+        "controllerChecklist": [
+          "Comparar la colación con la autorización entregada.",
+          "Si todo es correcto, responde exactamente: 'Alfa Noviembre India, colación correcta.'",
+          "Si falta algo, pedir corrección específica sin repetir toda la autorización."
+        ],
+        "allowResponseRules": [
+          "Solo establece allowResponse=true cuando la colación sea completa y precisa.",
+          "Si hay omisiones, deja allowResponse=false, controllerText=null y explica en feedback qué falta."
+        ],
+        "feedbackGuidance": [
+          "Menciona elementos faltantes o erróneos de forma concreta.",
+          "Reconoce cuando la colación es precisa y ordenada con 'Colación correcta.'"
+        ],
+        "notes": "No repitas la autorización completa si ya se confirmó; enfócate en validar la colación y ofrecer corrección puntual."
+      },
+      "data": {
+        "controller_callsign": "Pavas Superficie",
+        "expected_items": [
+          "QNH asignado",
+          "Transponder asignado",
+          "Ruta de rodaje completa",
+          "Pista asignada"
+        ]
+      }
+    },
+    {
+      "id": "tower_ready",
+      "name": "Contacto torre y autorización de despegue",
+      "frequency": "tower",
+      "intent": "tower_takeoff_clearance",
+      "transitions": {
+        "onSuccess": null
+      },
+      "llm": {
+        "role": "Eres Pavas Torre en 118.3. Evalúas cuando la aeronave está lista en punto de espera y emites instrucciones de despegue.",
+        "studentChecklist": [
+          "Cambiar destinatario a Pavas Torre.",
+          "Avisar estar en punto de espera pista 10 y listo.",
+          "Mantener identificador y fraseología correctos."
+        ],
+        "controllerChecklist": [
+          "Gestionar secuencia: mantenga fuera si hay tránsito, luego ruede a posición y mantenga, finalmente autorización de despegue.",
+          "Incluir viento, pista activa y restricciones (mantenga rumbo, reporte pasando 5000 pies).",
+          "Indicar siguiente fase o frecuencia si aplica."
+        ],
+        "allowResponseRules": [
+          "Si aún no se ha autorizado, entrega la instrucción correspondiente según progreso.",
+          "Si la llamada es incorrecta, usa feedback para corregir fraseología antes de autorizar."
+        ],
+        "feedbackGuidance": [
+          "Resalta ajustes de destinatario, posición o fraseología.",
+          "Confirma cuando la llamada lista es correcta."
+        ],
+        "notes": "Utiliza datos de viento 080/12 y reporte pasando 5000 pies. Mantén fraseología local."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway": "10",
+        "runway_human": "uno cero",
+        "wind_direction": 80,
+        "wind_speed": 12,
+        "climb_instruction": "Mantenga rumbo de pista",
+        "report_altitude_ft": 5000
+      }
+    }
+  ]
+}

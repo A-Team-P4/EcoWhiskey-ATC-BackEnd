@@ -1,0 +1,49 @@
+{
+  "id": "ground_taxi_clearance",
+  "frequency_group": "ground",
+  "slots": {
+    "required": [
+      "callsign_spelled",
+      "runway_human"
+    ],
+    "optional": [
+      "taxi_route",
+      "instruction_code",
+      "instruction_text",
+      "instruction_codes",
+      "wind_report",
+      "squawk_code",
+      "qnh_value",
+      "advisory_text",
+      "missing_readback_items"
+    ]
+  },
+  "render": {
+    "spanish": "{callsign_spelled}, {instruction_text}",
+    "instruction_map": {
+      "acknowledge": "recibido.",
+      "runway_in_use": "Pista en uso {runway_human}.",
+      "wind_report": "Viento {wind_report}.",
+      "squawk_assignment": "Transponder {squawk_code}.",
+      "qnh_assignment": "QNH {qnh_value}.",
+      "taxi_clearance": "Ruede vía {taxi_route} al punto de espera pista {runway_human}.",
+      "advise_ready": "{advisory_text}",
+      "hold_short": "Mantenga posición antes de la pista {runway_human}.",
+      "readback_correction": "Corrija colación: falta {missing_readback_items}."
+    },
+    "default_instruction_code": "taxi_clearance"
+  },
+  "metadata": {
+    "default_instruction_code": "taxi_clearance",
+    "allow_instruction_override": true
+  },
+  "fallback": {
+    "defaults": {
+      "instruction_code": "taxi_clearance",
+      "taxi_route": "taxiway principal",
+      "callsign": "TRAFICO",
+      "callsign_spelled": "Tráfico",
+      "runway_human": "uno cero"
+    }
+  }
+}

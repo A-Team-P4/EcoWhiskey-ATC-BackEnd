@@ -1,0 +1,9 @@
+{
+  "airport": "MRPV",
+  "station": "Superficie Pavas",
+  "frequencies": [
+    "121.7",
+    "121.70",
+    "121.700"
+  ]
+}
