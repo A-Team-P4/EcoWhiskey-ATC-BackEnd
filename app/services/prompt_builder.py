@@ -1,4 +1,9 @@
-"""Helpers to construct system/user prompts for the audio pipeline LLM."""
+"""Helpers to construct system/user prompts for the audio pipeline LLM.
+
+Given a scenario phase, recent turns, and the student transcript, we emit:
+* A system prompt describing the controller persona and strict JSON contract.
+* A user prompt containing operational context, guardrails, and turn snippets.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +11,7 @@ import json
 from dataclasses import dataclass
 from typing import Mapping, Sequence
 
+# Default personas for each tower/ground/etc. controller group.
 PROMPT_TEMPLATES = {
     "tower": (
         "Eres un controlador de torre en español (Costa Rica). "
@@ -43,6 +49,7 @@ class PromptBundle:
 
 
 def _format_turn_history(turn_history: Sequence[Mapping[str, object]] | None) -> str:
+    """Flatten a handful of prior turns so the LLM can see short-term context."""
     if not turn_history:
         return ""
 
@@ -55,6 +62,7 @@ def _format_turn_history(turn_history: Sequence[Mapping[str, object]] | None) ->
         role = str(turn.get("role", "desconocido")).capitalize()
         text = str(turn.get("text", "")).strip()
         metadata_bits: list[str] = []
+        # Pack lightweight hints so the LLM can reason about frequency/intent history.
         frequency = turn.get("frequency")
         if frequency:
             metadata_bits.append(f"freq={frequency}")
@@ -83,6 +91,7 @@ def build_prompt(
 ) -> PromptBundle:
     """Compose system/user prompts for the selected intent."""
 
+    # Base system prompt depends on the active frequency (tower/ground/etc.).
     system_prompt = PROMPT_TEMPLATES.get(
         context.frequency_group,
         PROMPT_TEMPLATES["tower"],
@@ -92,6 +101,7 @@ def build_prompt(
     if isinstance(phase, Mapping):
         llm_guidance = phase.get("llm") if isinstance(phase.get("llm"), Mapping) else {}
 
+    # Controller overrides embedded in the scenario take precedence over defaults.
     controller_role = (
         context.controller_role
         or (llm_guidance.get("role") if isinstance(llm_guidance, Mapping) else None)
@@ -124,6 +134,7 @@ def build_prompt(
 
     llm_sections: list[str] = []
     if isinstance(llm_guidance, Mapping):
+        # Copy over checklists and heuristics authored in scenario JSON for extra guidance.
         expectations = llm_guidance.get("studentChecklist")
         if expectations:
             if isinstance(expectations, str):
