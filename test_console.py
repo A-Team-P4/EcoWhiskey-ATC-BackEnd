@@ -91,6 +91,17 @@ AIRPORT_LABELS = [label for _, label in AIRPORTS]
 AIRPORT_LABEL_TO_CODE = {label: code for code, label in AIRPORTS}
 OBJECTIVE_LABELS = [label for _, label in OBJECTIVES]
 
+SCENARIOS = [
+    ("mrpv_vfr_departure", "MRPV – Rodaje y despegue (Superficie/Torre)", "ground"),
+    ("mrpv_coco_approach", "MRPV – COCO Aproximación", "approach"),
+    ("mrpv_full_flight", "MRPV – Flujo completo Superficie→COCO→Regreso", "ground"),
+]
+SCENARIO_LABELS = [label for _, label, _ in SCENARIOS]
+SCENARIO_LABEL_TO_INFO = {
+    label: {"id": scenario_id, "default_frequency_group": freq_group}
+    for scenario_id, label, freq_group in SCENARIOS
+}
+
 
 def extract_airport_code(selection: str) -> str:
     if not selection:
@@ -98,6 +109,16 @@ def extract_airport_code(selection: str) -> str:
     if selection in AIRPORT_LABEL_TO_CODE:
         return AIRPORT_LABEL_TO_CODE[selection]
     return selection.split(" ", 1)[0].strip()
+
+
+def get_scenario_info(selection: str) -> Optional[dict[str, str]]:
+    if not selection:
+        return None
+    info = SCENARIO_LABEL_TO_INFO.get(selection)
+    if info:
+        return info
+    # Fallback: allow direct scenario_id entry
+    return {"id": selection.strip(), "default_frequency_group": "ground"}
 
 
 @dataclass
@@ -337,9 +358,10 @@ class ApiTester(tk.Tk):
         frame.columnconfigure(0, weight=1)
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(2, weight=1)
-        frame.rowconfigure(5, weight=1)
+        frame.rowconfigure(7, weight=1)
         self.notebook.add(frame, text="Training Context")
 
+        default_scenario_label = SCENARIO_LABELS[0] if SCENARIO_LABELS else ""
         self.train_departure_var = tk.StringVar()
         self.train_arrival_var = tk.StringVar()
         self.train_condition_var = tk.StringVar(value=CONDITIONS[0])
@@ -348,17 +370,47 @@ class ApiTester(tk.Tk):
         self.train_qnh_var = tk.StringVar(value=default_qnh)
         self.train_wind_direction_var = tk.StringVar(value=WIND_DIRECTIONS[0])
         self.train_wind_speed_var = tk.StringVar(value=WIND_SPEEDS[0])
+        self.train_scenario_var = tk.StringVar(value=default_scenario_label)
+        self.student_callsign_var = tk.StringVar()
+        self.student_callsign_spelled_var = tk.StringVar()
+        self.student_hangar_var = tk.StringVar()
+        self.student_souls_var = tk.StringVar()
+        self.student_fuel_var = tk.StringVar()
+        self.student_captain_var = tk.StringVar()
+        self.student_route_var = tk.StringVar()
 
         self.training_route_display_var = tk.StringVar(value="Route: —")
         self.training_status_var = tk.StringVar(value="Configure fields and submit.")
         self.training_session_label_var = tk.StringVar(value="Last session: —")
+        self.training_scenario_hint_var = tk.StringVar(value="Scenario ID: —")
 
-        ttk.Label(frame, text="Route", font=("TkDefaultFont", 12, "bold")).grid(
+        ttk.Label(frame, text="Scenario", font=("TkDefaultFont", 12, "bold")).grid(
             row=0, column=0, columnspan=3, padx=8, pady=(10, 4), sticky="w"
         )
 
+        scenario_frame = ttk.Frame(frame)
+        scenario_frame.grid(row=1, column=0, columnspan=3, sticky="ew", padx=8)
+        scenario_frame.columnconfigure(0, weight=1)
+
+        ttk.Combobox(
+            scenario_frame,
+            values=SCENARIO_LABELS,
+            textvariable=self.train_scenario_var,
+            state="readonly",
+        ).grid(row=0, column=0, sticky="ew")
+
+        ttk.Label(
+            scenario_frame,
+            textvariable=self.training_scenario_hint_var,
+            foreground="gray25",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+
+        ttk.Label(frame, text="Route", font=("TkDefaultFont", 12, "bold")).grid(
+            row=2, column=0, columnspan=3, padx=8, pady=(10, 4), sticky="w"
+        )
+
         route_frame = ttk.Frame(frame)
-        route_frame.grid(row=1, column=0, columnspan=3, sticky="ew", padx=8)
+        route_frame.grid(row=3, column=0, columnspan=3, sticky="ew", padx=8)
         route_frame.columnconfigure(0, weight=1)
         route_frame.columnconfigure(1, weight=1)
 
@@ -381,15 +433,15 @@ class ApiTester(tk.Tk):
         self.train_arrival_combo.grid(row=1, column=1, sticky="ew", padx=(4, 0))
 
         ttk.Label(frame, textvariable=self.training_route_display_var).grid(
-            row=2, column=0, columnspan=3, padx=8, pady=(4, 12), sticky="w"
+            row=4, column=0, columnspan=3, padx=8, pady=(4, 12), sticky="w"
         )
 
         ttk.Label(frame, text="Meteorological Conditions", font=("TkDefaultFont", 12, "bold")).grid(
-            row=3, column=0, columnspan=3, padx=8, pady=(0, 4), sticky="w"
+            row=5, column=0, columnspan=3, padx=8, pady=(0, 4), sticky="w"
         )
 
         meteo_frame = ttk.Frame(frame)
-        meteo_frame.grid(row=4, column=0, columnspan=3, sticky="ew", padx=8)
+        meteo_frame.grid(row=6, column=0, columnspan=3, sticky="ew", padx=8)
         for col in range(3):
             meteo_frame.columnconfigure(col, weight=1)
 
@@ -440,7 +492,7 @@ class ApiTester(tk.Tk):
         )
 
         objectives_frame = ttk.LabelFrame(frame, text="Training Objectives")
-        objectives_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", padx=8, pady=(12, 8))
+        objectives_frame.grid(row=7, column=0, columnspan=3, sticky="nsew", padx=8, pady=(12, 8))
         objectives_frame.columnconfigure(0, weight=1)
         objectives_frame.rowconfigure(1, weight=1)
 
@@ -464,26 +516,54 @@ class ApiTester(tk.Tk):
         scrollbar.grid(row=1, column=1, sticky="ns", padx=(0, 6), pady=(0, 6))
         self.objectives_listbox.configure(yscrollcommand=scrollbar.set)
 
+        student_frame = ttk.LabelFrame(frame, text="Student Details (optional)")
+        student_frame.grid(row=8, column=0, columnspan=3, sticky="ew", padx=8, pady=(4, 8))
+        for col in range(3):
+            student_frame.columnconfigure(col, weight=1)
+
+        ttk.Label(student_frame, text="Callsign").grid(row=0, column=0, sticky="w", pady=(6, 2))
+        ttk.Entry(student_frame, textvariable=self.student_callsign_var).grid(row=1, column=0, sticky="ew", padx=(0, 4))
+
+        ttk.Label(student_frame, text="Callsign (spelled)").grid(row=0, column=1, sticky="w", pady=(6, 2))
+        ttk.Entry(student_frame, textvariable=self.student_callsign_spelled_var).grid(row=1, column=1, sticky="ew", padx=4)
+
+        ttk.Label(student_frame, text="Hangar / Stand").grid(row=0, column=2, sticky="w", pady=(6, 2))
+        ttk.Entry(student_frame, textvariable=self.student_hangar_var).grid(row=1, column=2, sticky="ew", padx=(4, 0))
+
+        ttk.Label(student_frame, text="Souls on board").grid(row=2, column=0, sticky="w", pady=(10, 2))
+        ttk.Entry(student_frame, textvariable=self.student_souls_var).grid(row=3, column=0, sticky="ew", padx=(0, 4))
+
+        ttk.Label(student_frame, text="Fuel endurance (min)").grid(row=2, column=1, sticky="w", pady=(10, 2))
+        ttk.Entry(student_frame, textvariable=self.student_fuel_var).grid(row=3, column=1, sticky="ew", padx=4)
+
+        ttk.Label(student_frame, text="Captain / PIC").grid(row=2, column=2, sticky="w", pady=(10, 2))
+        ttk.Entry(student_frame, textvariable=self.student_captain_var).grid(row=3, column=2, sticky="ew", padx=(4, 0))
+
+        ttk.Label(student_frame, text="Route / Remarks override").grid(row=4, column=0, columnspan=3, sticky="w", pady=(10, 2))
+        ttk.Entry(student_frame, textvariable=self.student_route_var).grid(row=5, column=0, columnspan=3, sticky="ew")
+
         ttk.Button(
             frame,
             text="Create Training Context",
             command=self._on_create_training_context,
             width=24,
-        ).grid(row=6, column=0, columnspan=3, padx=8, pady=(8, 4))
+        ).grid(row=9, column=0, columnspan=3, padx=8, pady=(8, 4))
 
         ttk.Label(frame, textvariable=self.training_status_var).grid(
-            row=7, column=0, columnspan=3, padx=8, pady=(0, 2), sticky="w"
+            row=10, column=0, columnspan=3, padx=8, pady=(0, 2), sticky="w"
         )
         ttk.Label(frame, textvariable=self.training_session_label_var).grid(
-            row=8, column=0, columnspan=3, padx=8, pady=(0, 12), sticky="w"
+            row=11, column=0, columnspan=3, padx=8, pady=(0, 12), sticky="w"
         )
 
         self.train_departure_var.trace_add("write", self._update_training_route_display)
         self.train_arrival_var.trace_add("write", self._update_training_route_display)
         self.train_wind_direction_var.trace_add("write", self._update_wind_summary)
         self.train_wind_speed_var.trace_add("write", self._update_wind_summary)
+        self.train_scenario_var.trace_add("write", self._update_scenario_hint)
         self._update_training_route_display()
         self._update_wind_summary()
+        self._update_scenario_hint()
 
     def _build_audio_tab(self) -> None:
         frame = ttk.Frame(self.notebook)
@@ -609,6 +689,20 @@ class ApiTester(tk.Tk):
             self.training_route_display_var.set(f"Route: {departure} → {arrival}")
         else:
             self.training_route_display_var.set("Route: —")
+
+    def _update_scenario_hint(self, *_args: Any) -> None:
+        hint_var = getattr(self, "training_scenario_hint_var", None)
+        scenario_var = getattr(self, "train_scenario_var", None)
+        if not hint_var or not scenario_var:
+            return
+        selection = scenario_var.get()
+        info = get_scenario_info(selection)
+        if not info:
+            hint_var.set("Scenario ID: —")
+            return
+        scenario_id = info.get("id") or "—"
+        freq_group = info.get("default_frequency_group") or "ground"
+        hint_var.set(f"Scenario ID: {scenario_id} · Frequency group: {freq_group}")
 
     def _update_wind_summary(self, *_args: Any) -> None:
         if not hasattr(self, "wind_summary_var"):
@@ -783,6 +877,12 @@ class ApiTester(tk.Tk):
         self._run_async(task)
 
     def _on_create_training_context(self) -> None:
+        scenario_selection = self.train_scenario_var.get().strip() if hasattr(self, "train_scenario_var") else ""
+        scenario_info = get_scenario_info(scenario_selection) if scenario_selection else None
+        if not scenario_info or not scenario_info.get("id"):
+            messagebox.showerror("Validation", "Select a training scenario.")
+            return
+
         departure = extract_airport_code(self.train_departure_var.get())
         arrival = extract_airport_code(self.train_arrival_var.get())
         if not departure or not arrival:
@@ -809,7 +909,46 @@ class ApiTester(tk.Tk):
             "route": route,
             "meteo": meteo,
             "objectives": objectives,
+            "scenario_id": scenario_info["id"],
         }
+        custom_route = self.student_route_var.get().strip()
+        if custom_route:
+            training_config["route"] = custom_route
+        default_freq_group = scenario_info.get("default_frequency_group")
+        if default_freq_group:
+            training_config["default_frequency_group"] = default_freq_group
+
+        student_payload: dict[str, Any] = {}
+        callsign = self.student_callsign_var.get().strip()
+        if callsign:
+            student_payload["callsign"] = callsign
+        callsign_spelled = self.student_callsign_spelled_var.get().strip()
+        if callsign_spelled:
+            student_payload["callsign_spelled"] = callsign_spelled
+        hangar = self.student_hangar_var.get().strip()
+        if hangar:
+            student_payload["hangar"] = hangar
+        souls = self.student_souls_var.get().strip()
+        if souls:
+            try:
+                student_payload["souls_on_board"] = int(souls)
+            except ValueError:
+                student_payload["souls_on_board"] = souls
+        fuel = self.student_fuel_var.get().strip()
+        if fuel:
+            try:
+                student_payload["fuel_endurance_minutes"] = int(fuel)
+            except ValueError:
+                student_payload["fuel_endurance_minutes"] = fuel
+        captain = self.student_captain_var.get().strip()
+        if captain:
+            student_payload["captain"] = captain
+        if custom_route:
+            student_payload["route"] = custom_route
+        elif route:
+            student_payload["route"] = route
+        if student_payload:
+            training_config["student"] = student_payload
 
         payload = {"context": training_config}
 

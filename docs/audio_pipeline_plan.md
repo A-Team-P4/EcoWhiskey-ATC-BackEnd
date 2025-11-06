@@ -30,8 +30,13 @@ This document captures the detailed design for the next iterations of the `/audi
 > **Training Setting**
 > - **Idioma**: Español, con fraseología aeronáutica costarricense.
 > - **Base primaria**: Aeropuerto Tobías Bolaños Internacional (MRPV – Pavas).
+> - **Relación con MROC**: Pavas es un aeródromo secundario enclavado dentro del CTR de San José (COCO). Está a pocos kilómetros del Aeropuerto Internacional Juan Santamaría (MROC), por lo que las salidas y llegadas suelen coordinarse rápidamente con COCO Aproximación tras contactar Torre Pavas (y viceversa en la llegada).
 > - **Cobertura de espacio aéreo**: Sectores controlados costarricenses (Torre, Superficie, COCO Aproximación/Control, radio, emergencia) con sus frecuencias reales.
 > - **Datos necesarios**: Pistas, calles de rodaje, patrones de tráfico, puntos de notificación, restricciones de altitud y climatología local; estos datos deben alimentar prompts, reglas y estocasticidad.
+> - **Escenarios activos**:
+>   - `app/resources/scenarios/mrpv_vfr_departure.json` — flujo abreviado hasta la autorización de despegue (baseline).
+>   - `app/resources/scenarios/mrpv_coco_approach.json` — práctica focalizada en COCO Aproximación.
+>   - `app/resources/scenarios/mrpv_full_flight.json` — recorrido completo Superficie → Torre → COCO Aproximación/Radio → UNICOM → regreso y aterrizaje en Pavas.
 > - **Experiencia estudiantil**: El sistema debe permitir simular un vuelo completo, incluyendo solicitudes de autorización de rodaje, despegue, transiciones de frecuencia, vectores radar, entradas a patrón, autorizaciones de aterrizaje y taxi a plataforma, siempre con retroalimentación sobre colación y fraseología.
 
 ### Demo Scenario (Primer Incremento)
@@ -59,6 +64,7 @@ This document captures the detailed design for the next iterations of the `/audi
   - Consider `training_turns` table with JSON payload for extensibility.
   - Provide async repository helpers (`get_context(session_id)`, `append_turn(...)`).
   - Current baseline: `POST /training_context/` (`app/controllers/training_context.py`) creates a `TrainingContext` row with a generated `training_session_id`, the authenticated user, and the initial context payload supplied at session start. Any turn repository should build on this record by linking via `training_session_id`.
+  - Session bootstrap now randomises per-flight parameters (squawk 05xx, viento, QNH, taxi-route) when absent and stores them in context so readback validation has consistent values.
 
 ### Frequency Intent Validator
 

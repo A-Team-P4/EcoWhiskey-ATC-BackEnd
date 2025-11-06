@@ -16,7 +16,7 @@ class StructuredLlmResponse(BaseModel):
     intent: str
     allow_response: bool = Field(alias="allowResponse")
     controller_text: Optional[str] = Field(default=None, alias="controllerText")
-    feedback_text: str = Field(alias="feedback")
+    feedback_text: Optional[str] = Field(default="", alias="feedback")
     confidence: Optional[float] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -26,6 +26,8 @@ class StructuredLlmResponse(BaseModel):
     def normalize_confidence(cls, values: "StructuredLlmResponse") -> "StructuredLlmResponse":
         if values.confidence is not None:
             values.confidence = max(0.0, min(1.0, float(values.confidence)))
+        if values.feedback_text is None:
+            values.feedback_text = ""
         return values
 
     @classmethod

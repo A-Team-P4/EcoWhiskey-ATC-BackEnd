@@ -1,0 +1,590 @@
+{
+  "id": "mrpv_full_flight",
+  "display_name": "MRPV salida zona ECO y retorno completo",
+  "airport": "MRPV",
+  "default_phase": "ground_departure_request",
+  "default_frequency_group": "ground",
+  "frequencies": {
+    "ground": "121.7",
+    "tower": "118.3",
+    "approach": "120.5",
+    "radio": "126.8",
+    "unicom": "122.0"
+  },
+  "shared": {
+    "student": {}
+  },
+  "phases": [
+    {
+      "id": "ground_departure_request",
+      "name": "Solicitud de apertura y autorización de rodaje",
+      "frequency": "ground",
+      "intent": "ground_taxi_clearance",
+      "transitions": {
+        "onSuccess": "ground_readback"
+      },
+      "llm": {
+        "role": "Eres Pavas Superficie (121.7). Recibes la llamada inicial para abrir plan de vuelo y autorizar rodaje.",
+        "studentChecklist": [
+          "Saludo correcto a Pavas Superficie.",
+          "Indicar ubicación actual en el aeródromo y destino previsto.",
+          "Solicitar apertura de plan e indicar altitud solicitada.",
+          "Proporcionar almas a bordo, piloto al mando y autonomía estimada."
+        ],
+        "controllerChecklist": [
+          "Reconocer la solicitud.",
+          "Indicar pista en uso, viento y QNH.",
+          "Asignar ruta de rodaje al punto de espera.",
+          "Recordar contactar Torre 118.3 cuando esté listo."
+        ],
+        "allowResponseRules": [
+          "Responde con allowResponse=true cuando la petición incluya datos esenciales.",
+          "Si falta información crítica, responde con allowResponse=false y detalla qué falta."
+        ],
+        "feedbackGuidance": [
+          "Reconoce cuando la llamada inicial incluye todos los datos: usa 'Solicitud completa.'",
+          "Si falta algo, indícalo de forma concreta.",
+          "Aca no se realiza colacion o readback. ya que es la primera interaccion."
+        ],
+        "notes": "La ruta de rodaje recomendada proviene del escenario; puedes ajustarla con los datos dinámicos almacenados."
+      },
+      "data": {
+        "controller_callsign": "Pavas Superficie",
+        "runway_human": "uno cero",
+        "advisory": "Contacte Torre 118.3 cuando listo"
+      }
+    },
+    {
+      "id": "ground_readback",
+      "name": "Readback de autorización de rodaje",
+      "frequency": "ground",
+      "intent": "ground_taxi_readback",
+      "transitions": {
+        "onSuccess": "tower_hold_short"
+      },
+      "llm": {
+        "role": "Sigues como Pavas Superficie. Evalúas la colación y decides si pasa a Torre.",
+        "studentChecklist": [
+          "Repetir pista, viento, QNH y ruta de rodaje.",
+          "Mantener indicativo correcto y mención de contactar Torre."
+        ],
+        "controllerChecklist": [
+          "Confirmar colación o pedir corrección puntual.",
+          "Indicar si puede cambiar a Torre (118.3) cuando esté listo."
+        ],
+        "allowResponseRules": [
+          "allowResponse=true solo si la colación es completa.",
+          "Si hay omisiones, deja allowResponse=false con feedback."
+        ],
+        "feedbackGuidance": [
+          "Lista los elementos faltantes.",
+          "Refuerza cuando la colación es precisa ('Colación correcta.')."
+        ],
+        "notes": "Evita repetir toda la autorización salvo que necesites corregir la colación."
+      },
+      "data": {
+        "controller_callsign": "Pavas Superficie",
+        "expected_items": [
+          "Pista en uso",
+          "Viento",
+          "QNH",
+          "Ruta de rodaje",
+          "Contacto Torre 118.3"
+        ]
+      }
+    },
+    {
+      "id": "tower_hold_short",
+      "name": "Contacto inicial con Torre (mantener fuera)",
+      "frequency": "tower",
+      "intent": "tower_hold_short",
+      "transitions": {
+        "onSuccess": "tower_line_up"
+      },
+      "llm": {
+        "role": "Eres Pavas Torre (118.3). El tránsito solicita despegue pero tienes tráfico en final.",
+        "studentChecklist": [
+          "Cambiar destinatario a Pavas Torre.",
+          "Indicar estar listo en punto de espera pista 10."
+        ],
+        "controllerChecklist": [
+          "Instruir mantener fuera de pista por tránsito.",
+          "Mantener tono breve y claro."
+        ],
+        "allowResponseRules": [
+          "Responde siempre; es una instrucción crítica de espera."
+        ],
+        "feedbackGuidance": [
+          "Si el alumno olvidó mencionar estar listo o destinatario, señálalo."
+        ],
+        "notes": "No autorices rodaje a pista todavía; solo confirma la espera."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero"
+      }
+    },
+    {
+      "id": "tower_line_up",
+      "name": "Autorización a posición y mantener",
+      "frequency": "tower",
+      "intent": "tower_line_up_wait",
+      "transitions": {
+        "onSuccess": "tower_takeoff_clearance"
+      },
+      "llm": {
+        "role": "Sigues en Pavas Torre. Una vez libre el tránsito, instruyes a la aeronave a posicionarse.",
+        "studentChecklist": [
+          "Reconocer la instrucción anterior y estar listo."
+        ],
+        "controllerChecklist": [
+          "Autorizar 'ruede a posición y mantenga pista 10'.",
+          "Mantener fraseología local (pista 'uno cero')."
+        ],
+        "allowResponseRules": [
+          "allowResponse=true con la instrucción de posición."
+        ],
+        "feedbackGuidance": [
+          "Confirma o corrige la fraseología del alumno."
+        ],
+        "notes": "No autorices despegue todavía."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero"
+      }
+    },
+    {
+      "id": "tower_takeoff_clearance",
+      "name": "Autorización de despegue",
+      "frequency": "tower",
+      "intent": "tower_takeoff_clearance",
+      "transitions": {
+        "onSuccess": "tower_initial_climb"
+      },
+      "llm": {
+        "role": "Como Torre, clearance final de despegue incluyendo viento y restricciones.",
+        "studentChecklist": [
+          "Solicitar autorización con fraseología adecuada.",
+          "Escuchar instrucciones de rumbo y reporte."
+        ],
+        "controllerChecklist": [
+          "Incluir viento, autorización de despegue, instrucción de mantener rumbo y reportar 5000 pies.",
+          "Recordar notificar contacto posterior."
+        ],
+        "allowResponseRules": [
+          "Autoriza solo si la aeronave está lista y sin conflictos."
+        ],
+        "feedbackGuidance": [
+          "Resalta fraseología correcta o faltante en el alumno."
+        ],
+        "notes": "Puedes mencionar el QNH si es relevante; la instrucción de reporte obliga a notificar pasando 5000."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero",
+        "report_altitude_ft": 5000,
+        "climb_instruction": "Mantenga rumbo de pista",
+        "next_frequency_phrase": "COCO Aproximación 120.5"
+      }
+    },
+    {
+      "id": "tower_initial_climb",
+      "name": "Reporte pasando 5000 y transferencia a Aproximación",
+      "frequency": "tower",
+      "intent": "tower_departure_handoff",
+      "transitions": {
+        "onSuccess": "approach_contact"
+      },
+      "llm": {
+        "role": "Ya en ascenso; al reportar 5000 pies instruyes cambio a COCO Aproximación.",
+        "studentChecklist": [
+          "Reportar pasando 5000 pies y rumbo previsto."
+        ],
+        "controllerChecklist": [
+          "Agradecer reporte.",
+          "Transferir a COCO Aproximación 120.5."
+        ],
+        "allowResponseRules": [
+          "Siempre responde para confirmar handoff."
+        ],
+        "feedbackGuidance": [
+          "Si el alumno omitió información, indícalo."
+        ],
+        "notes": "Mantén cierre cordial ('buen día')."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "next_frequency_phrase": "COCO Aproximación 120.5"
+      }
+    },
+    {
+      "id": "approach_contact",
+      "name": "Contacto inicial con COCO Aproximación",
+      "frequency": "approach",
+      "intent": "approach_initial_contact",
+      "transitions": {
+        "onSuccess": "approach_readback"
+      },
+      "llm": {
+        "role": "Eres COCO Aproximación (120.5). Recibes reporte pasando 5000 para 7000 rumbo Zona ECO.",
+        "studentChecklist": [
+          "Saludo a COCO Aproximación.",
+          "Indicar altitud actual, ascenso a 7000 y rumbo Zona ECO."
+        ],
+        "controllerChecklist": [
+          "Confirmar contacto radar.",
+          "Autorizar a continuar a 7000 pies.",
+          "Dar QNH y requerir reporte ingresando Zona ECO."
+        ],
+        "allowResponseRules": [
+          "Autoriza solo cuando la llamada incluya posición/altitud y rumbo."
+        ],
+        "feedbackGuidance": [
+          "Resalta si falta altitud o destino."
+        ],
+        "notes": "Incluye QNH dinámico almacenado en contexto."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "report_zone": "Zona ECO"
+      }
+    },
+    {
+      "id": "approach_readback",
+      "name": "Readback de COCO Aproximación",
+      "frequency": "approach",
+      "intent": "approach_readback",
+      "transitions": {
+        "onSuccess": "approach_zone_entry"
+      },
+      "llm": {
+        "role": "Validas la colación del alumno tras las instrucciones radar.",
+        "studentChecklist": [
+          "Repetir ascenso 7000 pies.",
+          "Confirmar QNH.",
+          "Mencionar reporte ingresando Zona ECO.",
+          "Cerrar con indicativo."
+        ],
+        "controllerChecklist": [
+          "Decir 'colación correcta' cuando corresponda.",
+          "Solicitar correcciones puntuales si falta algo."
+        ],
+        "allowResponseRules": [
+          "allowResponse=true cuando la colación sea correcta."
+        ],
+        "feedbackGuidance": [
+          "Anota elementos omitidos.",
+          "Reforzar cuando es correcta."
+        ],
+        "notes": "Mantén respuesta breve."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación"
+      }
+    },
+    {
+      "id": "approach_zone_entry",
+      "name": "Reporte ingresando Zona ECO",
+      "frequency": "approach",
+      "intent": "approach_zone_report",
+      "transitions": {
+        "onSuccess": "radio_check_in"
+      },
+      "llm": {
+        "role": "El alumno reporta 7000 pies ingresando Zona ECO. Debes transferirlo a COCO Radio.",
+        "studentChecklist": [
+          "Confirmar altitud y entrada a la zona."
+        ],
+        "controllerChecklist": [
+          "Acusar recibo.",
+          "Asignar contacto con COCO Radio 126.8."
+        ],
+        "allowResponseRules": [
+          "Responde siempre con handoff claro."
+        ],
+        "feedbackGuidance": [
+          "Si omitió datos, menciónalo."
+        ],
+        "notes": "Mantén saludo cordial."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "next_frequency_phrase": "COCO Radio 126.8"
+      }
+    },
+    {
+      "id": "radio_check_in",
+      "name": "Ingreso a COCO Radio",
+      "frequency": "radio",
+      "intent": "radio_initial_contact",
+      "transitions": {
+        "onSuccess": "radio_position_reporting"
+      },
+      "llm": {
+        "role": "Eres COCO Radio (126.8). Recibes reporte de ingreso y estimado en la zona.",
+        "studentChecklist": [
+          "Saludo y reporte de posición en Zona ECO.",
+          "Indicar altitud y estimado de permanencia."
+        ],
+        "controllerChecklist": [
+          "Proporcionar QNE 29.92.",
+          "Informar que no hay tránsito reportado.",
+          "Solicitar reportes cada 30 minutos o cambios."
+        ],
+        "allowResponseRules": [
+          "Siempre responde con instrucciones de monitoreo."
+        ],
+        "feedbackGuidance": [
+          "Señala si faltó el estimado o altitud."
+        ],
+        "notes": "Mantén estilo radio (informativo)."
+      },
+      "data": {
+        "controller_callsign": "COCO Radio"
+      }
+    },
+    {
+      "id": "radio_position_reporting",
+      "name": "Reportes en UNICOM y chequeos periódicos",
+      "frequency": "unicom",
+      "intent": "unicom_position_report",
+      "transitions": {
+        "onSuccess": "radio_exit_zone"
+      },
+      "llm": {
+        "role": "Durante operaciones en la zona ECO, el alumno emite reportes auto-gestionados en UNICOM (122.0).",
+        "studentChecklist": [
+          "Anunciar posición relativa (Cachí, Juan Viñas, norte de Cachí).",
+          "Mantener altitud y rumbo en el mensaje.",
+          "Identificarse correctamente."
+        ],
+        "controllerChecklist": [
+          "No responder; es un entorno aire-aire.",
+          "Solo proporcionar feedback si la fraseología es incorrecta."
+        ],
+        "allowResponseRules": [
+          "En condiciones normales, allowResponse debe ser false y controllerText null."
+        ],
+        "feedbackGuidance": [
+          "Resaltar si el alumno olvidó incluir posición/altitud o destinatario."
+        ],
+        "notes": "Recuerda que en UNICOM no hay respuesta del controlador."
+      }
+    },
+    {
+      "id": "radio_exit_zone",
+      "name": "Salida de Zona ECO y transferencia a Aproximación",
+      "frequency": "radio",
+      "intent": "radio_exit_zone",
+      "transitions": {
+        "onSuccess": "approach_return_contact"
+      },
+      "llm": {
+        "role": "COCO Radio recibe notificación de salida; debes transferirlo a Aproximación.",
+        "studentChecklist": [
+          "Informar abandono de la zona y destino Pavas."
+        ],
+        "controllerChecklist": [
+          "Acusar recibo.",
+          "Transferir a COCO Aproximación 120.5."
+        ],
+        "allowResponseRules": [
+          "Responde siempre."
+        ],
+        "feedbackGuidance": [
+          "Si faltó dirección o altitud, mencionarlo."
+        ],
+        "notes": "Mantén despedida cordial."
+      },
+      "data": {
+        "controller_callsign": "COCO Radio",
+        "next_frequency_phrase": "COCO Aproximación 120.5"
+      }
+    },
+    {
+      "id": "approach_return_contact",
+      "name": "Regreso a Aproximación desde Zona ECO",
+      "frequency": "approach",
+      "intent": "approach_return_contact",
+      "transitions": {
+        "onSuccess": "approach_three_rivers_report"
+      },
+      "llm": {
+        "role": "COCO Aproximación recibe al tráfico que abandona la zona rumbo a Pavas.",
+        "studentChecklist": [
+          "Reportar abandono de Zona ECO, altitud 7000 y destino Pavas."
+        ],
+        "controllerChecklist": [
+          "Dar QNH actualizado.",
+          "Solicitar reporte Tres Ríos con Pavas a la vista."
+        ],
+        "allowResponseRules": [
+          "Responder siempre."
+        ],
+        "feedbackGuidance": [
+          "Indicar elementos faltantes en el reporte."
+        ],
+        "notes": "Mantén ritmo radar estándar."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "report_point": "Tres Ríos"
+      }
+    },
+    {
+      "id": "approach_three_rivers_report",
+      "name": "Reporte Tres Ríos y transferencia a Torre",
+      "frequency": "approach",
+      "intent": "approach_transfer_tower",
+      "transitions": {
+        "onSuccess": "tower_arrival_contact"
+      },
+      "llm": {
+        "role": "Al recibir reporte Tres Ríos con Pavas a la vista, debes transferir a Torre.",
+        "studentChecklist": [
+          "Informar Tres Ríos y Pavas a la vista."
+        ],
+        "controllerChecklist": [
+          "Acusar recibo.",
+          "Transferir a Pavas Torre 118.3."
+        ],
+        "allowResponseRules": [
+          "Siempre responde."
+        ],
+        "feedbackGuidance": [
+          "Si falta altitud o visual, menciónalo."
+        ],
+        "notes": "Mantén despedida."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "next_frequency_phrase": "Pavas Torre 118.3"
+      }
+    },
+    {
+      "id": "tower_arrival_contact",
+      "name": "Ingreso al circuito en Pavas Torre",
+      "frequency": "tower",
+      "intent": "tower_arrival_clearance",
+      "transitions": {
+        "onSuccess": "tower_final"
+      },
+      "llm": {
+        "role": "De vuelta en Pavas Torre, instruyes circuito y QNH antes de aterrizaje.",
+        "studentChecklist": [
+          "Reportar posición (Tres Ríos) e intención de ingreso."
+        ],
+        "controllerChecklist": [
+          "Asignar circuito (derecho pista 10).",
+          "Proporcionar viento y QNH.",
+          "Solicitar reporte en final Palomas."
+        ],
+        "allowResponseRules": [
+          "Responde siempre."
+        ],
+        "feedbackGuidance": [
+          "Resaltar si el alumno omitió intención o posición."
+        ],
+        "notes": "Usa fraseología local (Palomas)."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero",
+        "report_point": "final Palomas"
+      }
+    },
+    {
+      "id": "tower_final",
+      "name": "Reporte final Palomas",
+      "frequency": "tower",
+      "intent": "tower_final_report",
+      "transitions": {
+        "onSuccess": "tower_landing"
+      },
+      "llm": {
+        "role": "Al recibir 'final Palomas', decides si autorizas aterrizaje.",
+        "studentChecklist": [
+          "Reportar final Palomas pista 10."
+        ],
+        "controllerChecklist": [
+          "Confirmar o ajustar secuencia.",
+          "Preparar autorización de aterrizaje."
+        ],
+        "allowResponseRules": [
+          "Responde siempre, aunque sea con 'mantenga'."
+        ],
+        "feedbackGuidance": [
+          "Corrige si olvidó datos clave."
+        ],
+        "notes": "Puedes pasar directo a autorización si está libre."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero"
+      }
+    },
+    {
+      "id": "tower_landing",
+      "name": "Autorización de aterrizaje",
+      "frequency": "tower",
+      "intent": "tower_landing_clearance",
+      "transitions": {
+        "onSuccess": "tower_taxi_in"
+      },
+      "llm": {
+        "role": "Emitir la autorización de aterrizaje con viento.",
+        "studentChecklist": [
+          "Solicitar o esperar autorización final."
+        ],
+        "controllerChecklist": [
+          "Autorizar aterrizar pista 10.",
+          "Incluir viento actual."
+        ],
+        "allowResponseRules": [
+          "Solo set allowResponse=true para la autorización."
+        ],
+        "feedbackGuidance": [
+          "Refuerza fraseología correcta."
+        ],
+        "notes": "Mantén respuesta concisa."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero"
+      }
+    },
+    {
+      "id": "tower_taxi_in",
+      "name": "Rodaje a hangar después de liberar pista",
+      "frequency": "tower",
+      "intent": "tower_taxi_instructions",
+      "transitions": {
+        "onSuccess": null
+      },
+      "llm": {
+        "role": "Tras la liberación de pista, asigna rodaje al hangar.",
+        "studentChecklist": [
+          "Reportar pista libre y calle por la que sale.",
+          "Solicitar instrucciones hacia el hangar."
+        ],
+        "controllerChecklist": [
+          "Asignar ruta (Alfa 3 – Alfa – Alfa 2).",
+          "Indicar mantener frecuencia."
+        ],
+        "allowResponseRules": [
+          "Responde siempre con instrucciones de rodaje."
+        ],
+        "feedbackGuidance": [
+          "Apunta omisiones del alumno."
+        ],
+        "notes": "Cierra la operación con indicación de mantener frecuencia."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "taxi_route": "Alfa 3 – Alfa – Alfa 2",
+        "hangar": "37"
+      }
+    }
+  ]
+}
