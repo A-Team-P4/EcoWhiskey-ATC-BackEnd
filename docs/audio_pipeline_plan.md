@@ -66,10 +66,9 @@ This document captures the detailed design for the next iterations of the `/audi
 - **Inputs**: Transcript text, selected frequency, session context (current phase, scenario), rubric rules.
 - **Outputs**: `FrequencyValidationResult` with `is_valid`, `intent`, `reason`.
 - **Details**:
-  - Backed by a pattern-based `IntentDetector` that loads JSON definitions in `app/resources/intents/`.
-  - Example: `mrpv_tower_takeoff_clearance.json` requires matches for “torre” + “listo” and optional cues like “punto de espera” to classify the take-off request.
+  - Actualmente se valida comparando la frecuencia ingresada con la fase activa y sus reglas declarativas; los mensajes de error se construyen en el controlador de audio.
   - Start with deterministic rules keyed by training scenario (e.g., runway operations).
-  - When rules are inconclusive, optionally escalate to the LLM in classification mode.
+  - When rules are inconclusive, optionally escalate to the LLM en modo de clasificación.
   - Surface actionable `reason` strings for the UI and logs (e.g., “Runway taxi requests must be on Ground 121.7”).
   - Log every decision for auditing and to refine rules.
 
@@ -125,7 +124,7 @@ This document captures the detailed design for the next iterations of the `/audi
   - `slots.callsign_spelled` utiliza alfabeto OTAN (`app/resources/reference/nato_alphabet.json`).
   - `runway` pertenece a `airport_profile.runways` y `runway_human` corresponde a su forma hablada.
   - `instruction_code` se valida contra el mapa `intent_instruction_catalog`.
-- **Renderizado**: `template_renderer` toma el JSON normalizado y genera la frase final (idioma es-CR). Ejemplo:
+- **Renderizado**: el LLM entrega `controllerText` y `feedback` listos para voz; no usamos un motor adicional de plantillas por ahora.
 
   ```python
   RenderedPhrase(
@@ -325,7 +324,7 @@ This document captures the detailed design for the next iterations of the `/audi
 - 🟡 Iterar en rúbricas/plantillas con datos reales (en progreso inicial con escenario MRPV).
 - ✅ Migrar a contrato LLM→JSON estructurado + validación centralizada de plantillas.
 - ✅ Diferenciar prompts por `frequency_group` para soportar torre/superficie.
-- ✅ Implementar `response_contract`, `template_renderer`, `prompt_builder` y ajustar `call_conversation_llm` para que Polly reciba solo frases renderizadas.
+- ✅ Implementar `response_contract`, `prompt_builder` y ajustar `call_conversation_llm` para que Polly reciba solo frases renderizadas por el LLM.
 - ☐ Añadir pruebas de contrato/snapshots automáticas y telemetría (`llm_contract_valid`, `llm_fallback_reason`).
 
 ### Next Steps

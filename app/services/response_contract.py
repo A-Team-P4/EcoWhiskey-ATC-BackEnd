@@ -1,4 +1,8 @@
-"""Pydantic models for validating LLM JSON responses."""
+"""Pydantic models for validating LLM JSON responses.
+
+Both the conversational pipeline and any future classifiers run through these
+schemas so that downstream code receives normalized, type-safe objects.
+"""
 
 from __future__ import annotations
 

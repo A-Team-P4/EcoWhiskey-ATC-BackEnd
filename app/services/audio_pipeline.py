@@ -1,4 +1,9 @@
-"""Audio pipeline orchestration with structured LLM responses."""
+"""Audio pipeline orchestration with structured LLM responses.
+
+This module loads per-session context (scenario, phase, frequencies, weather),
+constructs prompts tailored for the active controller role, invokes the Bedrock
+client, and validates the JSON contract returned by the model.
+"""
 
 from __future__ import annotations
 
@@ -48,6 +53,7 @@ _LLM_CLIENT = BedrockLlmClient()
 
 
 def _load_resource_json(relative_path: str) -> Mapping[str, Any]:
+    """Safely load optional JSON helpers (scenarios, airports) from disk."""
     resource_path = _RESOURCE_ROOT / relative_path
     if not resource_path.exists():
         return {}
@@ -55,28 +61,8 @@ def _load_resource_json(relative_path: str) -> Mapping[str, Any]:
         return json.load(resource_file)
 
 
-def _normalize_frequency_value(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _generate_frequency_variants(value: Any) -> set[str]:
-    variants: set[str] = set()
-    normalized = _normalize_frequency_value(value)
-    if not normalized:
-        return variants
-    variants.add(normalized)
-    try:
-        freq_float = float(normalized)
-    except (TypeError, ValueError):
-        return variants
-    for decimals in (1, 2, 3):
-        variants.add(f"{freq_float:.{decimals}f}")
-    return variants
-
-
 def _coerce_int(value: Any) -> int | None:
+    """Best-effort integer conversion that tolerates strings and None."""
     if value is None:
         return None
     if isinstance(value, int):
@@ -88,6 +74,7 @@ def _coerce_int(value: Any) -> int | None:
 
 
 def _parse_wind_components(value: Any) -> tuple[int | None, int | None]:
+    """Split a wind string formatted as `ddd/ss` into components if possible."""
     direction = None
     speed = None
     if isinstance(value, str) and "/" in value:
@@ -101,6 +88,7 @@ def _apply_context_overrides(
     scenario: dict[str, Any],
     stored_context: Mapping[str, Any],
 ) -> None:
+    """Project live session data (METAR, squawk overrides, etc.) into the scenario copy."""
     if not isinstance(scenario, dict):
         return
 
@@ -175,6 +163,7 @@ _DEFAULT_SCENARIO_ID = "mrpv_vfr_departure"
 
 
 def _load_scenarios() -> Mapping[str, Mapping[str, Any]]:
+    """Disk-backed cache of available training scenarios."""
     scenarios: dict[str, Mapping[str, Any]] = {}
     if not _SCENARIO_ROOT.exists():
         return scenarios
@@ -223,6 +212,7 @@ async def fetch_session_context(session_id: UUID) -> Mapping[str, Any]:
         key: value for key, value in context_state.items() if key != "turns"
     }
 
+    # Assemble a scenario snapshot that blends static JSON with per-session overrides.
     scenario_id = (
         stored_context.get("scenario_id")
         or (stored_context.get("scenario") or {}).get("id")
@@ -256,16 +246,21 @@ async def fetch_session_context(session_id: UUID) -> Mapping[str, Any]:
         current_phase = phases[0]
         default_phase_id = current_phase.get("id")
 
-    frequency_map: dict[str, str] = {}
     scenario_frequencies = (
         scenario.get("frequencies", {})
         or stored_context.get("frequencies", {})
         or {}
     )
-    for group, value in scenario_frequencies.items():
-        for variant in _generate_frequency_variants(value):
-            if variant:
-                frequency_map[variant] = group
+
+    stored_frequency_map = stored_context.get("frequency_map")
+    if isinstance(stored_frequency_map, Mapping) and stored_frequency_map:
+        frequency_map = {
+            str(key): str(value) for key, value in stored_frequency_map.items()
+        }
+    else:
+        frequency_map = {
+            str(key): str(value) for key, value in scenario_frequencies.items()
+        }
 
     default_frequency_group = (
         stored_context.get("default_frequency_group")
@@ -281,6 +276,7 @@ async def fetch_session_context(session_id: UUID) -> Mapping[str, Any]:
     if default_phase_id:
         context_base["phase_id"] = default_phase_id
 
+    # The controller endpoint clones + mutates this structure when calling the LLM.
     return {
         "airport": "MRPV",
         "session_id": str(session_id),
@@ -328,6 +324,7 @@ async def build_llm_request(
         recent_turns=context.get("recent_turns"),
     )
 
+    # `build_prompt` stitches together scenario/phase details into the JSON-first prompt.
     prompt_bundle = build_prompt(
         intent=intent,
         context=prompt_context,
@@ -359,6 +356,7 @@ async def build_llm_request(
 async def call_conversation_llm(request: LlmRequest) -> LlmOutcome:
     """Invoke the LLM, validate the response contract, and render the phrase."""
 
+    # Single point where Bedrock is contacted; wraps transport with contract validation.
     raw_response = await _LLM_CLIENT.invoke(
         system_prompt=request.system_prompt,
         user_prompt=request.user_prompt,
