@@ -1,6 +1,11 @@
 """Pydantic schemas used as views in the MVC architecture."""
 
-from .auth import LoginRequest, TokenResponse
+from .auth import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    LoginRequest,
+    TokenResponse,
+)
 from .common import ErrorResponse, SuccessResponse
 from .hello import HelloMessageCreate, HelloMessageRead
 from .schools import SchoolCreateRequest, SchoolResponse, SchoolUpdateRequest
@@ -28,6 +33,8 @@ __all__ = [
     "UserUpdateRequest",
     "UserChangeSchoolRequest",
     "UserChangePasswordRequest",
+    "ForgotPasswordRequest",
+    "ForgotPasswordResponse",
     "HelloMessageCreate",
     "HelloMessageRead",
     "TextToSpeechRequest",

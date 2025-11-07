@@ -69,6 +69,7 @@ async def get_training_history(
         select(TrainingContext)
         .where(TrainingContext.user_id == user_id)
         .order_by(TrainingContext.created_at.desc())
+        .limit(3)
     )
     contexts = result.scalars().all()
 
