@@ -1,0 +1,95 @@
+{
+  "id": "mrpv_coco_approach",
+  "display_name": "MRPV contacto COCO Aproximación",
+  "airport": "MRPV",
+  "default_phase": "approach_contact",
+  "default_frequency_group": "approach",
+  "frequencies": {
+    "approach": "120.5"
+  },
+  "shared": {
+    "student": {}
+  },
+  "phases": [
+    {
+      "id": "approach_contact",
+      "name": "Contacto inicial con COCO Aproximación",
+      "frequency": "approach",
+      "intent": "approach_initial_contact",
+      "transitions": {
+        "onSuccess": "approach_readback"
+      },
+      "llm": {
+        "role": "Eres controlador radar en COCO Aproximación (frecuencia 120.5). Evalúas la llamada inicial cuando la aeronave sale de Pavas y solicita instrucciones rumbo a Zona Eco.",
+        "studentChecklist": [
+          "Saludo y destinatario correctos (COCO Aproximación 120.5).",
+          "Reportar posición actual y rumbo previsto.",
+          "Indicar altitud actual, ascenso solicitado y mantener identificador."
+        ],
+        "controllerChecklist": [
+          "Confirmar contacto radar.",
+          "Asignar o confirmar altitud 7000 pies.",
+          "Reforzar QNH vigente.",
+          "Solicitar reporte al ingresar Zona Eco."
+        ],
+        "allowResponseRules": [
+          "Autoriza cuando la información clave esté presente (posición, ascenso, rumbo, identificador).",
+          "Si falta algún dato, responde con allowResponse=false y explica en feedback qué falta."
+        ],
+        "feedbackGuidance": [
+          "Indica si el alumno omitió posición, altitud o QNH.",
+          "Refuerza cuando la fraseología es correcta."
+        ],
+        "notes": "Utiliza datos del escenario para mencionar QNH y punto de reporte. Mantén fraseología radar costarricense."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "report_zone": "Zona Eco",
+        "report_altitude_ft": 5000,
+        "target_altitude_ft": 7000,
+        "qnh": "3005"
+      }
+    },
+    {
+      "id": "approach_readback",
+      "name": "Readback de autorización COCO Aproximación",
+      "frequency": "approach",
+      "intent": "approach_readback",
+      "transitions": {
+        "onSuccess": null
+      },
+      "llm": {
+        "role": "Continúas como COCO Aproximación 120.5. Validas la colación del alumno después de emitir instrucciones de ascenso y reporte.",
+        "studentChecklist": [
+          "Repetir ascenso 7000 pies.",
+          "Confirmar QNH.",
+          "Reconocer la instrucción de reportar Zona Eco.",
+          "Cerrar con el indicativo correcto."
+        ],
+        "controllerChecklist": [
+          "Comparar la colación con la autorización emitida.",
+          "Responder 'Colación correcta.' cuando todo esté completo.",
+          "Si falta algo, pedir la corrección puntual sin repetir toda la autorización."
+        ],
+        "allowResponseRules": [
+          "Permite allowResponse=true solo cuando la colación sea completa y precisa.",
+          "Si hay omisiones, deja allowResponse=false con feedback específico."
+        ],
+        "feedbackGuidance": [
+          "Lista los elementos faltantes u erróneos.",
+          "Refuerza con 'Colación correcta.' cuando sea adecuado."
+        ],
+        "notes": "Enfatiza la importancia de reportar ingreso a Zona Eco y confirmar QNH."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "expected_items": [
+          "Ascenso a 7000 pies",
+          "QNH asignado",
+          "Reporte Zona Eco",
+          "Indicativo correcto"
+        ]
+      }
+    }
+  ]
+}

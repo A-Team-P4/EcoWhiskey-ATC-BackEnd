@@ -8,16 +8,7 @@
     "tower": "118.3"
   },
   "shared": {
-    "student": {
-      "callsign": "ANI",
-      "callsign_spelled": "Alfa Noviembre India",
-      "hangar": "37",
-      "souls_on_board": 2,
-      "fuel_endurance_minutes": 210,
-      "captain": "Salas",
-      "route": "Zona Eco vía paso de Ochomogo",
-      "requested_altitude_ft": 7000
-    }
+    "student": {}
   },
   "phases": [
     {
@@ -31,11 +22,11 @@
       "llm": {
         "role": "Eres un controlador de superficie en Costa Rica (Pavas Superficie 121.7). Evalúas la llamada inicial de apertura de plan VFR y decides si emites la autorización.",
         "studentChecklist": [
-          "Destinatario correcto (Pavas Superficie / frecuencia 121.7)",
-          "Identificador y ubicación de la aeronave (ANI en hangar 37)",
-          "Ruta solicitada, punto de paso y altitud (Zona Eco vía Ochomogo, 7000 pies)",
-          "Personas a bordo y capitán al mando",
-          "Autonomía de combustible"
+          "Destinatario correcto (Pavas Superficie / frecuencia 121.7).",
+          "Identificador y ubicación actual de la aeronave.",
+          "Ruta solicitada, puntos de referencia y altitud deseada.",
+          "Personas a bordo y piloto al mando.",
+          "Autonomía de combustible aproximada."
         ],
         "controllerChecklist": [
           "Confirmar recepción y datos clave",
@@ -84,7 +75,7 @@
         ],
         "controllerChecklist": [
           "Comparar la colación con la autorización entregada.",
-          "Si todo es correcto, responde exactamente: 'Alfa Noviembre India, colación correcta.'",
+          "Si todo es correcto, responde exactamente: 'Colación correcta.'",
           "Si falta algo, pedir corrección específica sin repetir toda la autorización."
         ],
         "allowResponseRules": [
