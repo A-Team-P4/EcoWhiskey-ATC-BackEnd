@@ -18,6 +18,7 @@ class StructuredLlmResponse(BaseModel):
     controller_text: Optional[str] = Field(default=None, alias="controllerText")
     feedback_text: Optional[str] = Field(default="", alias="feedback")
     confidence: Optional[float] = None
+    score: Optional[float] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"populate_by_name": True, "extra": "allow"}
@@ -26,6 +27,8 @@ class StructuredLlmResponse(BaseModel):
     def normalize_confidence(cls, values: "StructuredLlmResponse") -> "StructuredLlmResponse":
         if values.confidence is not None:
             values.confidence = max(0.0, min(1.0, float(values.confidence)))
+        if values.score is not None:
+            values.score = max(0.0, min(100.0, float(values.score)))
         if values.feedback_text is None:
             values.feedback_text = ""
         return values
@@ -37,7 +40,7 @@ class StructuredLlmResponse(BaseModel):
         except json.JSONDecodeError as exc:
             raise ValidationError.from_exception_data(
                 "StructuredLlmResponse",
-                excs=[{"type": "json_decode_error", "loc": ("__root__",), "msg": str(exc), "input": payload}],
+                line_errors=[{"type": "json_decode_error", "loc": ("__root__",), "msg": str(exc), "input": payload}],
             )
         return cls.model_validate(data)
 
@@ -64,7 +67,7 @@ class IntentClassificationResponse(BaseModel):
         except json.JSONDecodeError as exc:
             raise ValidationError.from_exception_data(
                 "IntentClassificationResponse",
-                excs=[{"type": "json_decode_error", "loc": ("__root__",), "msg": str(exc), "input": payload}],
+                line_errors=[{"type": "json_decode_error", "loc": ("__root__",), "msg": str(exc), "input": payload}],
             )
         return cls.model_validate(data)
 

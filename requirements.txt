@@ -16,3 +16,5 @@ prometheus-client
 python-multipart
 requests
 sounddevice
+tzdata
+httpx

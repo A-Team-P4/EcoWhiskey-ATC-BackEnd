@@ -65,7 +65,7 @@
       "llm": {
         "role": "Sigues como Pavas Superficie. Evalúas la colación y decides si pasa a Torre.",
         "studentChecklist": [
-          "Repetir pista, viento, QNH y ruta de rodaje.",
+          "Repetir pista, QNH y ruta de rodaje.",
           "Mantener indicativo correcto y mención de contactar Torre."
         ],
         "controllerChecklist": [

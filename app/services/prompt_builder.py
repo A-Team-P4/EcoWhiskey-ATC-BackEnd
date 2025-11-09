@@ -121,8 +121,12 @@ def build_prompt(
         "  \"controllerText\": string | null,\n"
         "  \"feedback\": string,\n"
         "  \"confidence\": number | null,\n"
+        "  \"score\": number | null,\n"
         "  \"metadata\": object\n"
         " }.\n"
+        "El campo \"score\" debe ser un número de 0 a 100 que evalúe la calidad de la transmisión del alumno "
+        "para la fase actual, considerando: fraseología correcta, información completa, orden lógico, "
+        "y uso apropiado de la frecuencia. Un score de 100 es perfecto, 0 es completamente incorrecto.\n"
         "Si necesitas proponer un cambio de fase, incluye en metadata la clave \"nextPhase\"."
         " No escribas texto adicional antes o después del JSON."
     )

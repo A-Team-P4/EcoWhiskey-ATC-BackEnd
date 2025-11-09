@@ -48,6 +48,10 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+Dockerfile
+.Dockerfile
+docker-compose.yml
+.docker-compose.yml
 
 # Translations
 *.mo
@@ -131,6 +135,8 @@ dmypy.json
 CLAUDE.md
 **/CLAUDE.md
 */CLAUDE.md
+postgres-data/
+
 
 # OS
 .DS_Store

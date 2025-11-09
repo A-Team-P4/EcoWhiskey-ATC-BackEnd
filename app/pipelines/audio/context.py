@@ -147,7 +147,10 @@ def _apply_context_overrides(
 
 
 _AIRPORT_PROFILE = _load_resource_json("airports/mrpv.json")
-_DEFAULT_SCENARIO_ID = "mrpv_vfr_departure"
+
+# TODO: ESTO ESTA QUEMADO ACA
+_DEFAULT_SCENARIO_ID = "mrpv_full_flight" 
+# TODO: ESTO ESTA QUEMADO ACA
 
 
 def _load_scenarios() -> Mapping[str, Mapping[str, Any]]:
