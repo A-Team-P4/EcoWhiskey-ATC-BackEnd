@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import Column, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
+
+
+def get_costa_rica_now():
+    """Get current time in Costa Rica timezone."""
+    return datetime.now(ZoneInfo("America/Costa_Rica"))
 
 
 class TrainingContext(Base):
@@ -38,15 +44,15 @@ class TrainingContext(Base):
     )
 
     created_at = Column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        server_default="NOW()",
+        default=get_costa_rica_now,
     )
     updated_at = Column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        server_default="NOW()",
-        onupdate=datetime.utcnow,
+        default=get_costa_rica_now,
+        onupdate=get_costa_rica_now,
     )
 
     # relationships

@@ -16,7 +16,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
-from app.controllers.dependencies import CurrentUserDep
+from app.controllers.dependencies import CurrentUserDep, SessionDep
+from app.models.phase_score import PhaseScore
 from app.pipelines.audio import (
     AudioAnalysisPipeline,
     LlmOutcome,
@@ -51,6 +52,7 @@ _AUDIO_FILE_UPLOAD = File(...)
 @router.post("/analyze")
 async def analyze_audio(
     _current_user: CurrentUserDep,
+    db_session: SessionDep,
     session_id: UUID = _SESSION_ID_FORM,
     frequency: str = _FREQUENCY_FORM,
     audio_file: UploadFile = _AUDIO_FILE_UPLOAD,
@@ -163,7 +165,7 @@ async def analyze_audio(
     logger.info("Fase activa session=%s phase_id=%s intent=%s freq=%s", session_id, session_context.get("phase_id"), phase_intent, active_group)
 
     allow_response = False; controller_text = ""; feedback_text = "Colación recibida."
-    response_intent = phase_intent; response_confidence = None; response_metadata: dict[str, Any] = {}; llm_outcome: LlmOutcome | None = None
+    response_intent = phase_intent; response_confidence = None; response_score = None; response_metadata: dict[str, Any] = {}; llm_outcome: LlmOutcome | None = None
     if classifier_intent:
         response_metadata["detected_intent"] = classifier_intent
     if classifier_frequency_group:
@@ -191,6 +193,7 @@ async def analyze_audio(
             feedback_text = structured.feedback_text.strip() or feedback_text
             response_intent = structured.intent or phase_intent
             response_confidence = structured.confidence
+            response_score = structured.score
             if structured.metadata:
                 response_metadata.update(dict(structured.metadata))
         except Exception as exc:  # pragma: no cover - integration failure
@@ -206,6 +209,7 @@ async def analyze_audio(
         message = f"La frecuencia esperada para esta solicitud es {display_expected}."
         logger.info("Frecuencia fuera de rango intent=%s freq=%s esperado=%s", phase_intent, display_received, display_expected)
         controller_text = feedback_text = message
+        response_score = 0.0
         response_metadata.update({"frequency_valid": False})
         if expected_frequency:
             response_metadata["expected_frequency"] = display_expected
@@ -233,7 +237,7 @@ async def analyze_audio(
             if next_phase.get("frequency"):
                 session_context["default_frequency_group"] = session_context["active_frequency_group"] = next_phase["frequency"]
 
-    # Record what the “controller” said and keep the turn history bounded.
+    # Record what the "controller" said and keep the turn history bounded.
     controller_turn = {
         "role": "controller",
         "text": controller_text,
@@ -245,12 +249,43 @@ async def analyze_audio(
         controller_turn["intent"] = response_intent
     if response_confidence is not None:
         controller_turn["confidence"] = response_confidence
+    if response_score is not None:
+        controller_turn["score"] = response_score
     if response_metadata:
         controller_turn["metadata"] = response_metadata
     if llm_outcome is not None:
         controller_turn["llm_raw"] = llm_outcome.raw_response
 
     await save_turn(controller_turn)
+
+    # Save phase score to database if available
+    if response_score is not None:
+        current_phase_id = session_context.get("phase_id") or "unknown"
+
+        # If frequency was incorrect, only track the frequency error (don't penalize the phase)
+        if not is_valid_frequency:
+            frequency_error_score = PhaseScore(
+                training_session_id=session_id,
+                user_id=_current_user.id,
+                phase_id="frequency_usage_error",
+                score=0.0,
+                feedback=feedback_text,
+            )
+            db_session.add(frequency_error_score)
+            await db_session.commit()
+            logger.info("Error de frecuencia registrado session=%s phase_id=%s", session_id, current_phase_id)
+        else:
+            # Valid frequency: save the actual phase score
+            phase_score = PhaseScore(
+                training_session_id=session_id,
+                user_id=_current_user.id,
+                phase_id=current_phase_id,
+                score=response_score,
+                feedback=feedback_text,
+            )
+            db_session.add(phase_score)
+            await db_session.commit()
+            logger.info("Puntuación guardada session=%s phase_id=%s score=%.2f", session_id, current_phase_id, response_score)
 
     # Mirror what will be sent to the UI and Polly into logs for support.
     transcript_logger.info("controller | session=%s | frequency=%s | intent=%s | phase=%s | allow_response=%s | text=%s", session_id, frequency, controller_turn.get("intent"), controller_turn.get("phase_id"), allow_response, controller_text)

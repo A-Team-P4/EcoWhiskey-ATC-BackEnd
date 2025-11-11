@@ -80,7 +80,7 @@ class BedrockConfig(BaseSettings):
         validation_alias="BEDROCK_REGION",
     )
     model_id: str = Field(
-        default="amazon.nova-micro-v1:0",
+        default="amazon.nova-lite-v1:0",
         validation_alias="BEDROCK_MODEL_ID",
     )
     max_tokens: int = Field(
