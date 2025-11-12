@@ -1,0 +1,201 @@
+{
+  "id": "zone_echo_mrpv",
+  "display_name": "ECO y retorno a MRPV",
+  "airport": "MRPV",
+  "default_phase": "approach_return_contact",
+  "default_frequency_group": "approach",
+  "frequencies": {
+    "ground": "121.7",
+    "tower": "118.3",
+    "approach": "120.5"
+  },
+  "shared": {
+    "student": {}
+  },
+  "phases": [
+    {
+      "id": "approach_return_contact",
+      "name": "Regreso a Aproximación desde Zona ECO",
+      "frequency": "approach",
+      "intent": "approach_return_contact",
+      "transitions": {
+        "onSuccess": "approach_three_rivers_report"
+      },
+      "llm": {
+        "role": "COCO Aproximación recibe al tráfico que abandona la zona rumbo a Pavas.",
+        "studentChecklist": [
+          "Reportar abandono de Zona ECO, altitud 7000 y destino Pavas."
+        ],
+        "controllerChecklist": [
+          "Dar QNH actualizado.",
+          "Solicitar reporte Tres Ríos con Pavas a la vista."
+        ],
+        "allowResponseRules": [
+          "Responder siempre."
+        ],
+        "feedbackGuidance": [
+          "Indicar elementos faltantes en el reporte."
+        ],
+        "notes": "Mantén ritmo radar estándar."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "report_point": "Tres Ríos"
+      }
+    },
+    {
+      "id": "approach_three_rivers_report",
+      "name": "Reporte Tres Ríos y transferencia a Torre",
+      "frequency": "approach",
+      "intent": "approach_transfer_tower",
+      "transitions": {
+        "onSuccess": "tower_arrival_contact"
+      },
+      "llm": {
+        "role": "Al recibir reporte Tres Ríos con Pavas a la vista, debes transferir a Torre.",
+        "studentChecklist": [
+          "Informar Tres Ríos y Pavas a la vista."
+        ],
+        "controllerChecklist": [
+          "Acusar recibo.",
+          "Transferir a Pavas Torre 118.3."
+        ],
+        "allowResponseRules": [
+          "Siempre responde."
+        ],
+        "feedbackGuidance": [
+          "Si falta altitud o visual, menciónalo."
+        ],
+        "notes": "Mantén despedida."
+      },
+      "data": {
+        "controller_callsign": "COCO Aproximación",
+        "next_frequency_phrase": "Pavas Torre 118.3"
+      }
+    },
+    {
+      "id": "tower_arrival_contact",
+      "name": "Ingreso al circuito en Pavas Torre",
+      "frequency": "tower",
+      "intent": "tower_arrival_clearance",
+      "transitions": {
+        "onSuccess": "tower_final"
+      },
+      "llm": {
+        "role": "De vuelta en Pavas Torre, instruyes circuito y QNH antes de aterrizaje.",
+        "studentChecklist": [
+          "Reportar posición (Tres Ríos) e intención de ingreso."
+        ],
+        "controllerChecklist": [
+          "Asignar circuito (derecho pista 10).",
+          "Proporcionar viento y QNH.",
+          "Solicitar reporte en final Palomas."
+        ],
+        "allowResponseRules": [
+          "Responde siempre."
+        ],
+        "feedbackGuidance": [
+          "Resaltar si el alumno omitió intención o posición."
+        ],
+        "notes": "Usa fraseología local (Palomas)."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero",
+        "report_point": "final Palomas"
+      }
+    },
+    {
+      "id": "tower_final",
+      "name": "Reporte final Palomas",
+      "frequency": "tower",
+      "intent": "tower_final_report",
+      "transitions": {
+        "onSuccess": "tower_landing"
+      },
+      "llm": {
+        "role": "Al recibir 'final Palomas', decides si autorizas aterrizaje.",
+        "studentChecklist": [
+          "Reportar final Palomas pista 10."
+        ],
+        "controllerChecklist": [
+          "Confirmar o ajustar secuencia.",
+          "Preparar autorización de aterrizaje."
+        ],
+        "allowResponseRules": [
+          "Responde siempre, aunque sea con 'mantenga'."
+        ],
+        "feedbackGuidance": [
+          "Corrige si olvidó datos clave."
+        ],
+        "notes": "Puedes pasar directo a autorización si está libre."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero"
+      }
+    },
+    {
+      "id": "tower_landing",
+      "name": "Autorización de aterrizaje",
+      "frequency": "tower",
+      "intent": "tower_landing_clearance",
+      "transitions": {
+        "onSuccess": "tower_taxi_in"
+      },
+      "llm": {
+        "role": "Emitir la autorización de aterrizaje con viento.",
+        "studentChecklist": [
+          "Solicitar o esperar autorización final."
+        ],
+        "controllerChecklist": [
+          "Autorizar aterrizar pista 10.",
+          "Incluir viento actual."
+        ],
+        "allowResponseRules": [
+          "Solo set allowResponse=true para la autorización."
+        ],
+        "feedbackGuidance": [
+          "Refuerza fraseología correcta."
+        ],
+        "notes": "Mantén respuesta concisa."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "runway_human": "uno cero"
+      }
+    },
+    {
+      "id": "tower_taxi_in",
+      "name": "Rodaje a hangar después de liberar pista",
+      "frequency": "tower",
+      "intent": "tower_taxi_instructions",
+      "transitions": {
+        "onSuccess": null
+      },
+      "llm": {
+        "role": "Tras la liberación de pista, asigna rodaje al hangar.",
+        "studentChecklist": [
+          "Reportar pista libre y calle por la que sale.",
+          "Solicitar instrucciones hacia el hangar."
+        ],
+        "controllerChecklist": [
+          "Asignar ruta (Alfa 3 – Alfa – Alfa 2).",
+          "Indicar mantener frecuencia."
+        ],
+        "allowResponseRules": [
+          "Responde siempre con instrucciones de rodaje."
+        ],
+        "feedbackGuidance": [
+          "Apunta omisiones del alumno."
+        ],
+        "notes": "Cierra la operación con indicación de mantener frecuencia."
+      },
+      "data": {
+        "controller_callsign": "Pavas Torre",
+        "taxi_route": "Alfa 3 – Alfa – Alfa 2",
+        "hangar": "37"
+      }
+    }
+  ]
+}
