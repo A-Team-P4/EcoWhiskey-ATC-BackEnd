@@ -57,7 +57,10 @@ async def get_training_history(
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> list[TrainingContextHistoryItem]:
-    """Return the chronological history of training contexts for the given user."""
+    """Return the chronological history of training contexts for the given user.
+
+    Only extracts scenario_id from the context JSONB for efficiency.
+    """
 
     if current_user.id != user_id:
         raise HTTPException(
@@ -66,18 +69,23 @@ async def get_training_history(
         )
 
     result = await session.execute(
-        select(TrainingContext)
+        select(
+            TrainingContext.training_session_id,
+            TrainingContext.context["scenario_id"].label("scenario_id"),
+            TrainingContext.created_at,
+            TrainingContext.updated_at,
+        )
         .where(TrainingContext.user_id == user_id)
         .order_by(TrainingContext.created_at.desc())
-        .limit(3)
     )
-    contexts = result.scalars().all()
+    rows = result.all()
 
     return [
         TrainingContextHistoryItem(
-            trainingSessionId=context.training_session_id,
-            context=context.context,
-            createdAt=context.created_at,
+            trainingSessionId=row.training_session_id,
+            context={"scenario_id": row.scenario_id},
+            createdAt=row.created_at,
+            updatedAt=row.updated_at,
         )
-        for context in contexts
+        for row in rows
     ]

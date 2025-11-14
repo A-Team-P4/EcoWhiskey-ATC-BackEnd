@@ -39,6 +39,9 @@ class TrainingContextHistoryItem(BaseModel):
     createdAt: datetime = Field(
         ..., description="Timestamp when the context was created", alias="createdAt"
     )
+    updatedAt: datetime = Field(
+        ..., description="Timestamp when the context was last updated", alias="updatedAt"
+    )
 
     class Config:
         populate_by_name = True
