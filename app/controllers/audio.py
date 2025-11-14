@@ -311,4 +311,5 @@ async def analyze_audio(
         "audio_url": audio_url,
         "controller_text": controller_text if allow_response and controller_text else None,
         "feedback": feedback_text,
+        "session_completed": bool(session_context.get("session_completed")),
     }
