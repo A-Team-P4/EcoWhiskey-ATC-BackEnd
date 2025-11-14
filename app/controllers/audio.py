@@ -236,6 +236,19 @@ async def analyze_audio(
             session_context["phase"] = next_phase
             if next_phase.get("frequency"):
                 session_context["default_frequency_group"] = session_context["active_frequency_group"] = next_phase["frequency"]
+            session_context.pop("session_completed", None)
+    else:
+        phase_transitions = current_phase.get("transitions") if isinstance(current_phase, Mapping) else None
+        has_followup_phase = False
+        if isinstance(phase_transitions, Mapping):
+            for transition_target in phase_transitions.values():
+                if isinstance(transition_target, str) and transition_target.strip():
+                    has_followup_phase = True
+                    break
+        if not has_followup_phase:
+            session_context["session_completed"] = True
+        else:
+            session_context.pop("session_completed", None)
 
     # Record what the "controller" said and keep the turn history bounded.
     controller_turn = {

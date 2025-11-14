@@ -17,6 +17,7 @@ _CONTEXT_FIELDS = (
     "squawk",
     "taxi_route",
     "phase_id",
+    "session_completed",
 )
 
 
