@@ -1,0 +1,55 @@
+﻿<mxfile host="app.diagrams.net" modified="2025-11-12T00:25:00.000Z" agent="5.0 (Codex)" version="22.1.4" editor="www.draw.io">
+  <diagram id="EcoWhiskeyFlow" name="Mapa de Flujo del Proyecto">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Mapa de Flujo del Proyecto" style="text;whiteSpace=wrap;html=1;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="30" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1" value="Paso 1&#xa;Preparar entorno&#xa;.env &#183; secretos &#183; settings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="100" y="220" width="190" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2" value="Paso 2&#xa;Configurar FastAPI&#xa;main.py &#183; middlewares" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="320" y="220" width="190" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3" value="Paso 3&#xa;Crear controladores&#xa;auth &#183; users &#183; audio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="540" y="220" width="190" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="p4" value="Paso 4&#xa;Definir flujo de audio&#xa;ingesta &#8594; transcripci&#243;n &#8594; contexto" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="760" y="220" width="210" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="p5" value="Paso 5&#xa;Integrar servicios&#xa;LLM &#183; TTS &#183; storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="220" width="210" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="p6" value="Paso 6&#xa;Persistir datos&#xa;SQLAlchemy &#183; TrainingContext" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="220" width="210" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="p7" value="Paso 7&#xa;Exponer resultados&#xa;readbacks &#183; logs &#183; m&#233;tricas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="220" width="210" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="note" value="Inserte aqu&#237; un mapa o diagrama de flujo que muestre el avance del proyecto" style="text;whiteSpace=wrap;html=1;fontSize=13;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="600" y="90" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="p1" target="p2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e23" value="" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="p2" target="p3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e34" value="" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="p3" target="p4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e45" value="" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="p4" target="p5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e56" value="" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="p5" target="p6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e67" value="" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="p6" target="p7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
