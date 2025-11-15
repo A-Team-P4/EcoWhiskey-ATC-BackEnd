@@ -1,13 +1,15 @@
 """Flight context endpoints."""
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.controllers.dependencies import CurrentUserDep, SessionDep
+from app.models.phase_score import PhaseScore
 from app.models.training_context import TrainingContext
 from app.views.training_context import (
+    LastControllerTurnResponse,
     TrainingContextHistoryItem,
     TrainingContextRequest,
     TrainingContextResponse,
@@ -72,6 +74,7 @@ async def get_training_history(
         select(
             TrainingContext.training_session_id,
             TrainingContext.context["scenario_id"].label("scenario_id"),
+            TrainingContext.context["session_completed"].label("session_completed"),
             TrainingContext.created_at,
             TrainingContext.updated_at,
         )
@@ -83,9 +86,129 @@ async def get_training_history(
     return [
         TrainingContextHistoryItem(
             trainingSessionId=row.training_session_id,
-            context={"scenario_id": row.scenario_id},
+            context={
+                "scenario_id": row.scenario_id,
+                "session_completed": row.session_completed,
+            },
             createdAt=row.created_at,
             updatedAt=row.updated_at,
         )
         for row in rows
     ]
+
+
+@router.get(
+    "/last-controller-turn/{training_session_id}",
+    response_model=LastControllerTurnResponse,
+)
+async def get_last_controller_turn(
+    training_session_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> LastControllerTurnResponse:
+    """Get the last controller turn information from a training session.
+
+    Finds the last turn where role === 'controller' in the turns array,
+    and extracts frequency from the previous turn.
+    """
+
+    # Fetch the training context
+    result = await session.execute(
+        select(TrainingContext).where(
+            TrainingContext.training_session_id == training_session_id
+        )
+    )
+    training_context = result.scalar_one_or_none()
+
+    if not training_context:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Training session not found",
+        )
+
+    if training_context.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to this training session is forbidden",
+        )
+
+    context = training_context.context
+    turns = context.get("turns", [])
+    session_completed = context.get("session_completed", False)
+
+    # Find the last controller turn
+    frequency = None
+    controller_text = None
+    feedback = None
+
+    # Iterate backwards to find the last controller turn
+    for i in range(len(turns) - 1, -1, -1):
+        turn = turns[i]
+        if turn.get("role") == "controller":
+            controller_text = turn.get("text")
+            feedback = turn.get("feedback")
+
+            # Get frequency from the previous turn (index i-1)
+            if i > 0:
+                previous_turn = turns[i - 1]
+                frequency = previous_turn.get("frequency")
+
+            break
+
+    return LastControllerTurnResponse(
+        session_id=training_session_id,
+        frequency=frequency,
+        controller_text=controller_text,
+        feedback=feedback,
+        session_completed=session_completed,
+    )
+
+
+@router.delete(
+    "/{training_session_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_training_session(
+    training_session_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> None:
+    """Delete a training session and all associated phase scores.
+
+    First deletes all phase scores, then deletes the training context.
+    Only the owner of the training session can delete it.
+    """
+
+    # Verify the training session exists and belongs to the current user
+    result = await session.execute(
+        select(TrainingContext).where(
+            TrainingContext.training_session_id == training_session_id
+        )
+    )
+    training_context = result.scalar_one_or_none()
+
+    if not training_context:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Training session not found",
+        )
+
+    if training_context.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to this training session is forbidden",
+        )
+
+    # Delete phase scores first
+    await session.execute(
+        delete(PhaseScore).where(PhaseScore.training_session_id == training_session_id)
+    )
+
+    # Delete training context
+    await session.execute(
+        delete(TrainingContext).where(
+            TrainingContext.training_session_id == training_session_id
+        )
+    )
+
+    await session.commit()
