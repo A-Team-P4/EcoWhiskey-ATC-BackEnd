@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -41,6 +41,29 @@ class TrainingContextHistoryItem(BaseModel):
     )
     updatedAt: datetime = Field(
         ..., description="Timestamp when the context was last updated", alias="updatedAt"
+    )
+
+    class Config:
+        populate_by_name = True
+
+
+class LastControllerTurnResponse(BaseModel):
+    """Response schema for the last controller turn in a training session."""
+
+    session_id: UUID = Field(
+        ..., description="Training session identifier", alias="session_id"
+    )
+    frequency: Optional[str] = Field(
+        None, description="Frequency from the previous turn"
+    )
+    controller_text: Optional[str] = Field(
+        None, description="Controller text from the last controller turn", alias="controller_text"
+    )
+    feedback: Optional[str] = Field(
+        None, description="Feedback from the last controller turn"
+    )
+    session_completed: bool = Field(
+        False, description="Whether the session is completed", alias="session_completed"
     )
 
     class Config:
