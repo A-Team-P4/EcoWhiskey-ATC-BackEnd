@@ -47,6 +47,18 @@ class User(Base):
     )
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="SET NULL"), nullable=True)
     school = relationship("School", back_populates="users", lazy="joined")
+    owned_groups = relationship(
+        "Group",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        foreign_keys="Group.owner_id",
+    )
+    group_memberships = relationship(
+        "GroupMembership",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="GroupMembership.user_id",
+    )
     photo = Column(Text, nullable=True)
     created_at = Column(
         DateTime,
