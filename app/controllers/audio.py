@@ -49,6 +49,12 @@ _FREQUENCY_FORM = Form(...)
 _AUDIO_FILE_UPLOAD = File(...)
 
 
+def _phase_marks_session_completion(phase: Mapping[str, Any] | None) -> bool:
+    """Return True when a scenario phase declares that the session is completed."""
+
+    return bool(isinstance(phase, Mapping) and phase.get("session_completed"))
+
+
 @router.post("/analyze")
 async def analyze_audio(
     _current_user: CurrentUserDep,
@@ -105,6 +111,7 @@ async def analyze_audio(
     current_phase = session_context.get("phase")
     if not isinstance(current_phase, Mapping):
         logger.error("No hay fase activa para session=%s", session_id); raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="No hay fase activa configurada para la sesión.")
+    current_phase_marks_completion = _phase_marks_session_completion(current_phase)
 
     scenario_intent = current_phase.get("intent")
     phase_intent = classifier_intent or scenario_intent
@@ -222,6 +229,7 @@ async def analyze_audio(
 
     # Update session phase automatically if the response (or LLM metadata) says so.
     next_phase_id = (response_metadata.get("nextPhase") or response_metadata.get("next_phase")) if response_metadata else None
+    transitioned = False
     if not next_phase_id and allow_response:
         transitions = current_phase.get("transitions")
         candidate = (transitions.get("onSuccess") or transitions.get("success")) if isinstance(transitions, Mapping) else None
@@ -234,10 +242,14 @@ async def analyze_audio(
             logger.info("Transición automática de fase session=%s de=%s a=%s", session_id, current_phase.get("id"), next_phase_id)
             session_context["phase_id"] = next_phase_id
             session_context["phase"] = next_phase
+            transitioned = True
             if next_phase.get("frequency"):
                 session_context["default_frequency_group"] = session_context["active_frequency_group"] = next_phase["frequency"]
-            session_context.pop("session_completed", None)
-    else:
+            if _phase_marks_session_completion(next_phase):
+                session_context["session_completed"] = True
+            else:
+                session_context.pop("session_completed", None)
+    if not transitioned:
         phase_transitions = current_phase.get("transitions") if isinstance(current_phase, Mapping) else None
         has_followup_phase = False
         if isinstance(phase_transitions, Mapping):
@@ -245,7 +257,7 @@ async def analyze_audio(
                 if isinstance(transition_target, str) and transition_target.strip():
                     has_followup_phase = True
                     break
-        if not has_followup_phase:
+        if current_phase_marks_completion or not has_followup_phase:
             session_context["session_completed"] = True
         else:
             session_context.pop("session_completed", None)

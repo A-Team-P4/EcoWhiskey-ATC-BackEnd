@@ -584,7 +584,8 @@
         "controller_callsign": "Pavas Torre",
         "taxi_route": "Alfa 3 – Alfa – Alfa 2",
         "hangar": "37"
-      }
+      },
+      "session_completed": true
     }
   ]
 }
