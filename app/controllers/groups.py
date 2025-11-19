@@ -141,6 +141,66 @@ async def list_groups(
     ]
 
 
+@router.get("/users/{user_id}", response_model=list[GroupResponse])
+async def list_groups_for_user(
+    user_id: int,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+) -> list[GroupResponse]:
+    """Allow instructors to inspect the groups that belong to a specific user."""
+
+    result = await session.execute(select(UserModel).where(UserModel.id == user_id))
+    target_user = result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if current_user.id != target_user.id:
+        _ensure_instructor(current_user)
+        if target_user.school_id != current_user.school_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only view users from your academy",
+            )
+
+    memberships_query = await session.execute(
+        select(Group, GroupMembership)
+        .join(GroupMembership, GroupMembership.group_id == Group.id)
+        .where(GroupMembership.user_id == target_user.id)
+    )
+    rows = memberships_query.all()
+    groups_map: dict[int, tuple[Group, GroupMembership | None]] = {
+        group.id: (group, membership) for group, membership in rows
+    }
+
+    if target_user.account_type == AccountType.INSTRUCTOR:
+        owner_rows = await session.execute(
+            select(Group).where(Group.owner_id == target_user.id)
+        )
+        for group in owner_rows.scalars().all():
+            if group.id in groups_map:
+                continue
+            pseudo_membership = GroupMembership(
+                group_id=group.id,
+                user_id=target_user.id,
+                role=GroupRole.INSTRUCTOR,
+                status=GroupMembershipStatus.ACTIVE,
+                invited_by_id=target_user.id,
+            )
+            groups_map[group.id] = (group, pseudo_membership)
+
+    sorted_groups = sorted(
+        groups_map.values(),
+        key=lambda entry: entry[0].name.lower(),
+    )
+    return [
+        _serialize_group(group, membership)
+        for group, membership in sorted_groups
+    ]
+
+
 @router.post(
     "/",
     response_model=GroupResponse,
