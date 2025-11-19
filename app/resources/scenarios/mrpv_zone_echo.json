@@ -309,8 +309,9 @@
       "data": {
         "controller_callsign": "COCO Aproximación",
         "next_frequency_phrase": "COCO Radio 126.8"
-      }
+      },
+      "session_completed": true
     }
-    
+
   ]
 }
