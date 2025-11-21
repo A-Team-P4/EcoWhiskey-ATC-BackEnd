@@ -8,10 +8,12 @@ from sqlalchemy.exc import IntegrityError
 
 from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.school import School as SchoolModel
+from app.models.user import AccountType, User as UserModel
 from app.views import (
     SchoolCreateRequest,
     SchoolResponse,
     SchoolUpdateRequest,
+    UserResponse,
 )
 
 router = APIRouter(prefix="/schools", tags=["schools"])
@@ -65,11 +67,40 @@ async def create_school(
 @router.get("/", response_model=list[SchoolResponse])
 async def list_schools(
     session: SessionDep,
-    _current_user: CurrentUserDep,
 ) -> list[SchoolResponse]:
     result = await session.execute(select(SchoolModel).order_by(SchoolModel.name))
     schools = result.scalars().all()
     return [SchoolResponse.model_validate(school) for school in schools]
+
+
+@router.get("/{school_id}/students", response_model=list[UserResponse])
+async def list_school_students(
+    school_id: int,
+    session: SessionDep,
+    _current_user: CurrentUserDep,
+) -> list[UserResponse]:
+    """Return the roster of student accounts for a given school."""
+
+    result = await session.execute(
+        select(SchoolModel).where(SchoolModel.id == school_id)
+    )
+    school = result.scalar_one_or_none()
+    if not school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="School not found",
+        )
+
+    students_result = await session.execute(
+        select(UserModel)
+        .where(
+            UserModel.school_id == school_id,
+            UserModel.account_type == AccountType.STUDENT,
+        )
+        .order_by(UserModel.first_name, UserModel.last_name)
+    )
+    students = students_result.scalars().all()
+    return [UserResponse.model_validate(student) for student in students]
 
 
 @router.get("/{school_id}", response_model=SchoolResponse)

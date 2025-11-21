@@ -8,6 +8,14 @@ from .auth import (
 )
 from .common import ErrorResponse, SuccessResponse
 from .hello import HelloMessageCreate, HelloMessageRead
+from .groups import (
+    GroupCreateRequest,
+    GroupMemberResponse,
+    GroupMembershipCreateRequest,
+    GroupMembershipResponse,
+    GroupResponse,
+    GroupUpdateRequest,
+)
 from .schools import SchoolCreateRequest, SchoolResponse, SchoolUpdateRequest
 from .training_context import (
     TrainingContextHistoryItem,
@@ -44,6 +52,12 @@ __all__ = [
     "TrainingContextHistoryItem",
     "TrainingContextRequest",
     "TrainingContextResponse",
+    "GroupCreateRequest",
+    "GroupUpdateRequest",
+    "GroupResponse",
+    "GroupMembershipCreateRequest",
+    "GroupMembershipResponse",
+    "GroupMemberResponse",
     "ErrorResponse",
     "SuccessResponse",
     "LoginRequest",

@@ -24,6 +24,11 @@ class School(Base):
     )
 
     users = relationship("User", back_populates="school")
+    groups = relationship(
+        "Group",
+        back_populates="school",
+        cascade="all, delete-orphan",
+    )
 
 
 __all__ = ["School"]

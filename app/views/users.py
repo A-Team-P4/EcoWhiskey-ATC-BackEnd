@@ -149,6 +149,8 @@ class UserRegistrationRequest(BaseModel):
         if self.accountType == AccountType.INSTRUCTOR:
             if not self.schoolId:
                 raise ValueError("School is required for instructor accounts")
+        if self.accountType == AccountType.STUDENT and self.schoolId:
+            raise ValueError("Students cannot select a school during registration")
         return self
 
     @field_validator("photo")
