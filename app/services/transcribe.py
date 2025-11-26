@@ -86,20 +86,30 @@ class TranscribeService:
             chunk_size = 8192
             bytes_per_sec = self._media_sample_rate_hz * 2  # 16-bit = 2 bytes
             sleep_time = chunk_size / bytes_per_sec
-
+            
+            logger.info(f"Starting stream. Total bytes: {len(pcm_data)}. Chunk size: {chunk_size}. Sleep: {sleep_time:.4f}s")
+            
+            total_sent = 0
             for i in range(0, len(pcm_data), chunk_size):
                 chunk = pcm_data[i : i + chunk_size]
                 await stream.input_stream.send_audio_event(audio_chunk=chunk)
-                # Sleep to simulate real-time streaming, otherwise we might overwhelm the connection
-                # or hit the "too fast" limit for long files.
+                total_sent += len(chunk)
+                # Sleep to simulate real-time streaming
                 await asyncio.sleep(sleep_time)
+                
+                if i % (chunk_size * 50) == 0: # Log every ~50 chunks
+                     logger.debug(f"Streamed {total_sent}/{len(pcm_data)} bytes")
+
+            logger.info("Finished streaming audio bytes. Ending stream.")
             await stream.input_stream.end_stream()
 
         try:
             await asyncio.gather(write_chunks(), handler.handle_events())
         except Exception as exc:
+            logger.error(f"Streaming loop failed: {exc}")
             raise TranscriptionError(f"Streaming transcription failed: {exc}") from exc
 
+        logger.info(f"Transcription complete. Length: {len(handler.transcript)}")
         return TranscriptionResult(transcript=handler.transcript.strip())
 
     async def _convert_to_pcm(self, audio_bytes: bytes) -> bytes:
@@ -107,18 +117,24 @@ class TranscribeService:
         return await run_in_threadpool(self._convert_to_pcm_sync, audio_bytes)
 
     def _convert_to_pcm_sync(self, audio_bytes: bytes) -> bytes:
-        """Synchronous ffmpeg conversion."""
+        """Synchronous ffmpeg conversion using a temporary file to support seeking."""
+        import tempfile
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp_file:
+            tmp_file.write(audio_bytes)
+            tmp_path = tmp_file.name
+
         try:
             process = subprocess.run(
                 [
                     "ffmpeg",
-                    "-i", "pipe:0",
+                    "-y", # Overwrite output if exists (though we use pipe)
+                    "-i", tmp_path,
                     "-f", "s16le",
                     "-ac", "1",
                     "-ar", str(self._media_sample_rate_hz),
                     "pipe:1",
                 ],
-                input=audio_bytes,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=True,
@@ -130,7 +146,9 @@ class TranscribeService:
             error_msg = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else "No stderr"
             logger.error("ffmpeg failed. stderr: %s", error_msg)
             raise TranscriptionError(f"ffmpeg failed to convert audio to PCM: {error_msg}") from exc
-
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
 class _SimpleTranscriptHandler(TranscriptResultStreamHandler):
     def __init__(self, transcript_result_stream):
@@ -142,6 +160,7 @@ class _SimpleTranscriptHandler(TranscriptResultStreamHandler):
         for result in results:
             if not result.is_partial:
                 for alt in result.alternatives:
+                    logger.debug(f"Received transcript chunk: {alt.transcript[:20]}...")
                     self.transcript += alt.transcript + " "
 
 

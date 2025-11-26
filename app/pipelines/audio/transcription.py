@@ -33,7 +33,7 @@ async def transcribe_audio(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from exc
-
+    
     return result.transcript
 
 

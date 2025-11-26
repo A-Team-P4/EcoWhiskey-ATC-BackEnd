@@ -33,6 +33,7 @@ from app.pipelines.audio import (
     transcribe_audio,
 )
 from app.services.context_repository import MAX_TURNS_STORED, append_turn
+from app.services.storage import upload_session_asset
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
@@ -66,6 +67,20 @@ async def analyze_audio(
     """Transcribe an uploaded MP3 or M4A file and generate a Polly readback."""
     content_type = resolve_content_type(audio_file)
     audio_bytes = await read_audio_bytes(audio_file)
+
+    # Persist the student's input audio to S3 (so it is not "deleted" / lost)
+    ext = "mp3" if "mpeg" in content_type or "mp3" in content_type else "m4a"
+    try:
+        await upload_session_asset(
+            session_id,
+            audio_bytes,
+            kind="student",
+            extension=ext,
+            content_type=content_type,
+        )
+    except Exception:
+        logger.warning("No se pudo persistir el audio del estudiante en S3", exc_info=True)
+
     transcript_text = await transcribe_audio(session_id, audio_bytes, content_type)
 
     # Log both for observability and to capture audio transcripts in the dedicated logger.
