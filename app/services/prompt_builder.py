@@ -80,6 +80,24 @@ def _format_turn_history(turn_history: Sequence[Mapping[str, object]] | None) ->
     return "Turnos previos:\n" + "\n".join(formatted_turns) + "\n\n"
 
 
+import re
+
+def _substitute_dynamic_values(text: str, data: Mapping[str, object]) -> str:
+    """Replace [data.key] placeholders with values from the data dictionary."""
+    if not text or not isinstance(text, str):
+        return text
+    
+    def replacer(match):
+        key = match.group(1)
+        # Allow nested keys if needed, though currently we mostly use flat data
+        val = data.get(key)
+        if val is not None:
+            return str(val)
+        return match.group(0)  # Keep original if key not found
+
+    return re.sub(r"\[data\.([\w_]+)\]", replacer, text)
+
+
 def build_prompt(
     *,
     intent: str,
@@ -98,8 +116,10 @@ def build_prompt(
     )
 
     llm_guidance = {}
+    phase_data = {}
     if isinstance(phase, Mapping):
         llm_guidance = phase.get("llm") if isinstance(phase.get("llm"), Mapping) else {}
+        phase_data = phase.get("data") if isinstance(phase.get("data"), Mapping) else {}
 
     # Controller overrides embedded in the scenario take precedence over defaults.
     controller_role = (
@@ -107,6 +127,8 @@ def build_prompt(
         or (llm_guidance.get("role") if isinstance(llm_guidance, Mapping) else None)
     )
     if controller_role:
+        # Apply dynamic substitution to the role
+        controller_role = _substitute_dynamic_values(controller_role, phase_data)
         system_prompt = controller_role
     else:
         system_prompt += (
@@ -142,34 +164,39 @@ def build_prompt(
         expectations = llm_guidance.get("studentChecklist")
         if expectations:
             if isinstance(expectations, str):
-                llm_sections.append(f"Checklist alumno:\n- {expectations}")
+                text = _substitute_dynamic_values(expectations, phase_data)
+                llm_sections.append(f"Checklist alumno:\n- {text}")
             elif isinstance(expectations, Sequence):
-                items = "\n".join(f"- {item}" for item in expectations)
+                items = "\n".join(f"- {_substitute_dynamic_values(str(item), phase_data)}" for item in expectations)
                 llm_sections.append(f"Checklist alumno:\n{items}")
         controller_steps = llm_guidance.get("controllerChecklist")
         if controller_steps:
             if isinstance(controller_steps, str):
-                llm_sections.append(f"Checklist controlador:\n- {controller_steps}")
+                text = _substitute_dynamic_values(controller_steps, phase_data)
+                llm_sections.append(f"Checklist controlador:\n- {text}")
             elif isinstance(controller_steps, Sequence):
-                items = "\n".join(f"- {item}" for item in controller_steps)
+                items = "\n".join(f"- {_substitute_dynamic_values(str(item), phase_data)}" for item in controller_steps)
                 llm_sections.append(f"Checklist controlador:\n{items}")
         allow_rules = llm_guidance.get("allowResponseRules")
         if allow_rules:
             if isinstance(allow_rules, str):
-                llm_sections.append(f"Cuándo responder:\n- {allow_rules}")
+                text = _substitute_dynamic_values(allow_rules, phase_data)
+                llm_sections.append(f"Cuándo responder:\n- {text}")
             elif isinstance(allow_rules, Sequence):
-                items = "\n".join(f"- {item}" for item in allow_rules)
+                items = "\n".join(f"- {_substitute_dynamic_values(str(item), phase_data)}" for item in allow_rules)
                 llm_sections.append(f"Cuándo responder:\n{items}")
         feedback_guidance = llm_guidance.get("feedbackGuidance")
         if feedback_guidance:
             if isinstance(feedback_guidance, str):
-                llm_sections.append(f"Guía de feedback:\n- {feedback_guidance}")
+                text = _substitute_dynamic_values(feedback_guidance, phase_data)
+                llm_sections.append(f"Guía de feedback:\n- {text}")
             elif isinstance(feedback_guidance, Sequence):
-                items = "\n".join(f"- {item}" for item in feedback_guidance)
+                items = "\n".join(f"- {_substitute_dynamic_values(str(item), phase_data)}" for item in feedback_guidance)
                 llm_sections.append(f"Guía de feedback:\n{items}")
         additional_notes = llm_guidance.get("notes")
         if additional_notes:
-            llm_sections.append(f"Notas adicionales: {additional_notes}")
+            text = _substitute_dynamic_values(additional_notes, phase_data)
+            llm_sections.append(f"Notas adicionales: {text}")
 
     llm_guidance_text = "\n\n".join(llm_sections)
     phase_name = context.phase_name or (phase.get("name") if isinstance(phase, Mapping) else None)
