@@ -18,3 +18,4 @@ requests
 sounddevice
 tzdata
 httpx
+amazon-transcribe
