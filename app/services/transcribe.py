@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -42,6 +43,13 @@ class TranscribeService:
         self._language_code = language_code
         self._media_sample_rate_hz = media_sample_rate_hz
         self._media_encoding = media_encoding
+        
+        # Ensure credentials are available to the SDK
+        if settings.s3.access_key:
+            os.environ["AWS_ACCESS_KEY_ID"] = settings.s3.access_key
+        if settings.s3.secret_key:
+            os.environ["AWS_SECRET_ACCESS_KEY"] = settings.s3.secret_key
+            
         self._client = TranscribeStreamingClient(region=region)
 
     async def transcribe_session_audio(
