@@ -80,13 +80,19 @@ class TranscribeService:
         handler = _SimpleTranscriptHandler(stream.output_stream)
 
         async def write_chunks():
-            # Chunk size: 4KB (approx 23ms at 44.1kHz 16-bit mono, or 46ms at 22kHz)
-            # Transcribe recommends bigger chunks, e.g. 100ms.
-            # 100ms at 44100Hz 16-bit (2 bytes) = 44100 * 2 * 0.1 = 8820 bytes.
+            # Chunk size: 4KB (approx 23ms at 44.1kHz 16-bit mono)
+            # 44100 Hz * 2 bytes/sample = 88200 bytes/sec
+            # 8192 bytes / 88200 bytes/sec ~= 0.092 seconds (92ms)
             chunk_size = 8192
+            bytes_per_sec = self._media_sample_rate_hz * 2  # 16-bit = 2 bytes
+            sleep_time = chunk_size / bytes_per_sec
+
             for i in range(0, len(pcm_data), chunk_size):
                 chunk = pcm_data[i : i + chunk_size]
                 await stream.input_stream.send_audio_event(audio_chunk=chunk)
+                # Sleep to simulate real-time streaming, otherwise we might overwhelm the connection
+                # or hit the "too fast" limit for long files.
+                await asyncio.sleep(sleep_time)
             await stream.input_stream.end_stream()
 
         try:
@@ -114,12 +120,16 @@ class TranscribeService:
                 ],
                 input=audio_bytes,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
                 check=True,
             )
+            if not process.stdout:
+                logger.warning("ffmpeg produced empty output. stderr: %s", process.stderr.decode("utf-8", errors="replace"))
             return process.stdout
         except subprocess.CalledProcessError as exc:
-            raise TranscriptionError("ffmpeg failed to convert audio to PCM.") from exc
+            error_msg = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else "No stderr"
+            logger.error("ffmpeg failed. stderr: %s", error_msg)
+            raise TranscriptionError(f"ffmpeg failed to convert audio to PCM: {error_msg}") from exc
 
 
 class _SimpleTranscriptHandler(TranscriptResultStreamHandler):
