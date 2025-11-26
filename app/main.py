@@ -6,6 +6,11 @@ import logging
 from logging.handlers import RotatingFileHandler
 import sys
 from pathlib import Path
+import asyncio
+
+# Force ProactorEventLoop on Windows for subprocess support
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
