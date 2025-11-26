@@ -5,9 +5,11 @@ from __future__ import annotations
 import os
 import asyncio
 import logging
+import subprocess
 from dataclasses import dataclass
 from uuid import UUID
 
+from fastapi.concurrency import run_in_threadpool
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
@@ -95,22 +97,29 @@ class TranscribeService:
         return TranscriptionResult(transcript=handler.transcript.strip())
 
     async def _convert_to_pcm(self, audio_bytes: bytes) -> bytes:
-        """Convert input audio to raw PCM s16le via ffmpeg."""
-        process = await asyncio.create_subprocess_exec(
-            "ffmpeg",
-            "-i", "pipe:0",
-            "-f", "s16le",
-            "-ac", "1",
-            "-ar", str(self._media_sample_rate_hz),
-            "pipe:1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        stdout, _ = await process.communicate(input=audio_bytes)
-        if process.returncode != 0:
-            raise TranscriptionError("ffmpeg failed to convert audio to PCM.")
-        return stdout
+        """Convert input audio to raw PCM s16le via ffmpeg using a thread."""
+        return await run_in_threadpool(self._convert_to_pcm_sync, audio_bytes)
+
+    def _convert_to_pcm_sync(self, audio_bytes: bytes) -> bytes:
+        """Synchronous ffmpeg conversion."""
+        try:
+            process = subprocess.run(
+                [
+                    "ffmpeg",
+                    "-i", "pipe:0",
+                    "-f", "s16le",
+                    "-ac", "1",
+                    "-ar", str(self._media_sample_rate_hz),
+                    "pipe:1",
+                ],
+                input=audio_bytes,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+            return process.stdout
+        except subprocess.CalledProcessError as exc:
+            raise TranscriptionError("ffmpeg failed to convert audio to PCM.") from exc
 
 
 class _SimpleTranscriptHandler(TranscriptResultStreamHandler):
