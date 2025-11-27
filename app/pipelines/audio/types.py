@@ -8,7 +8,7 @@ creating circular dependencies.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Mapping, Any
 
 from app.services.response_contract import StructuredLlmResponse
 

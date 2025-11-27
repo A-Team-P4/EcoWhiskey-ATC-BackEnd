@@ -84,10 +84,10 @@ class BedrockConfig(BaseSettings):
         validation_alias="BEDROCK_MODEL_ID",
     )
     max_tokens: int = Field(
-        default=200,
+        default=1000,
         validation_alias="BEDROCK_MAX_TOKENS",
         ge=1,
-        le=4096,
+        le=200000,
     )
     temperature: float = Field(
         default=0.0,
