@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 
 from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.phase_score import PhaseScore
+from app.models.user import AccountType, User as UserModel
 from app.services.llm_client import BedrockLlmClient
 from app.views.scores import AllPhasesScoresResponse, PhaseScoreData, ScoreRecord
 
@@ -17,20 +18,72 @@ router = APIRouter(prefix="/scores", tags=["scores"])
 logger = logging.getLogger(__name__)
 
 
+async def _get_user_or_404(db_session: SessionDep, user_id: int) -> UserModel:
+    """Return a user or raise 404."""
+
+    result = await db_session.execute(select(UserModel).where(UserModel.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return user
+
+
+async def _ensure_can_view_user_scores(
+    db_session: SessionDep,
+    target_user_id: int,
+    current_user: CurrentUserDep,
+) -> UserModel:
+    """Validate that the requester can see score data for the target user."""
+
+    target_user = await _get_user_or_404(db_session, target_user_id)
+    if target_user.id == current_user.id:
+        return target_user
+
+    if current_user.account_type != AccountType.INSTRUCTOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to view scores for another user",
+        )
+    if not current_user.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Assign an academy to your profile first",
+        )
+    if target_user.school_id != current_user.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view students from your academy",
+        )
+
+    return target_user
+
+
 @router.get("/phases")
 async def get_all_phases_scores(
     _current_user: CurrentUserDep,
     db_session: SessionDep,
     phase_ids: Optional[str] = Query(None, description="Comma-separated phase IDs to filter"),
+    user_id: Optional[int] = Query(
+        None,
+        alias="userId",
+        description="User ID to inspect (instructors can view students from their academy)",
+    ),
 ) -> AllPhasesScoresResponse:
     """Get scores for all phases or specific phases, grouped by phase_id.
 
     Args:
         phase_ids: Optional comma-separated string of phase IDs (e.g., "phase1,phase2,phase3")
+        user_id: Instructor-only override to fetch scores of a student in the same academy.
 
     Returns:
         AllPhasesScoresResponse with phases dictionary containing phase score data
     """
+
+    target_user_id = user_id or _current_user.id
+    await _ensure_can_view_user_scores(db_session, target_user_id, _current_user)
 
     # Parse phase_ids if provided
     phase_list = None
@@ -38,7 +91,7 @@ async def get_all_phases_scores(
         phase_list = [pid.strip() for pid in phase_ids.split(",") if pid.strip()]
 
     # Build base query
-    query = select(PhaseScore).where(PhaseScore.user_id == _current_user.id)
+    query = select(PhaseScore).where(PhaseScore.user_id == target_user_id)
 
     # Filter by phase IDs if provided
     if phase_list:
@@ -102,14 +155,22 @@ async def get_phase_scores(
     _current_user: CurrentUserDep,
     db_session: SessionDep,
     phase_id: str,
+    user_id: Optional[int] = Query(
+        None,
+        alias="userId",
+        description="User ID to inspect (instructors can view students from their academy)",
+    ),
 ) -> dict[str, Any]:
     """Get all scores for a specific phase across all sessions for the current user."""
+
+    target_user_id = user_id or _current_user.id
+    await _ensure_can_view_user_scores(db_session, target_user_id, _current_user)
 
     # Get all scores for this phase
     result = await db_session.execute(
         select(PhaseScore)
         .where(PhaseScore.phase_id == phase_id)
-        .where(PhaseScore.user_id == _current_user.id)
+        .where(PhaseScore.user_id == target_user_id)
         .order_by(PhaseScore.created_at.desc())
     )
     scores = result.scalars().all()
@@ -149,11 +210,25 @@ async def get_session_scores(
 ) -> dict[str, Any]:
     """Get all phase scores and averages for a training session."""
 
+    owner_result = await db_session.execute(
+        select(PhaseScore.user_id)
+        .where(PhaseScore.training_session_id == session_id)
+        .limit(1)
+    )
+    owner_user_id = owner_result.scalar_one_or_none()
+    if owner_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No scores found for this session",
+        )
+
+    await _ensure_can_view_user_scores(db_session, owner_user_id, _current_user)
+
     # Get all scores for this session
     result = await db_session.execute(
         select(PhaseScore)
         .where(PhaseScore.training_session_id == session_id)
-        .where(PhaseScore.user_id == _current_user.id)
+        .where(PhaseScore.user_id == owner_user_id)
         .order_by(PhaseScore.created_at)
     )
     scores = result.scalars().all()
@@ -172,7 +247,7 @@ async def get_session_scores(
             func.count(PhaseScore.id).label("score_count"),
         )
         .where(PhaseScore.training_session_id == session_id)
-        .where(PhaseScore.user_id == _current_user.id)
+        .where(PhaseScore.user_id == owner_user_id)
         .group_by(PhaseScore.phase_id)
     )
 
@@ -213,11 +288,25 @@ async def get_session_summary(
 ) -> dict[str, Any]:
     """Get session scores grouped by phase with LLM-generated summary."""
 
+    owner_result = await db_session.execute(
+        select(PhaseScore.user_id)
+        .where(PhaseScore.training_session_id == session_id)
+        .limit(1)
+    )
+    owner_user_id = owner_result.scalar_one_or_none()
+    if owner_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No scores found for this session",
+        )
+
+    await _ensure_can_view_user_scores(db_session, owner_user_id, _current_user)
+
     # Get all scores for this session
     result = await db_session.execute(
         select(PhaseScore)
         .where(PhaseScore.training_session_id == session_id)
-        .where(PhaseScore.user_id == _current_user.id)
+        .where(PhaseScore.user_id == owner_user_id)
         .order_by(PhaseScore.created_at)
     )
     scores = result.scalars().all()
@@ -301,14 +390,22 @@ async def get_phase_summary(
     _current_user: CurrentUserDep,
     db_session: SessionDep,
     phase_id: str,
+    user_id: Optional[int] = Query(
+        None,
+        alias="userId",
+        description="User ID to inspect (instructors can view students from their academy)",
+    ),
 ) -> dict[str, Any]:
     """Get all scores for a phase with LLM-generated improvement summary."""
+
+    target_user_id = user_id or _current_user.id
+    await _ensure_can_view_user_scores(db_session, target_user_id, _current_user)
 
     # Get all scores for this phase
     result = await db_session.execute(
         select(PhaseScore)
         .where(PhaseScore.phase_id == phase_id)
-        .where(PhaseScore.user_id == _current_user.id)
+        .where(PhaseScore.user_id == target_user_id)
         .order_by(PhaseScore.created_at.desc())
     )
     scores = result.scalars().all()
