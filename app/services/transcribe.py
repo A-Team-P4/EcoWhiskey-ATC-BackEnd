@@ -78,8 +78,6 @@ class TranscribeService:
         )
 
         handler = _SimpleTranscriptHandler(stream.output_stream)
-
-        async def write_chunks():
             # Chunk size: 4KB (approx 23ms at 44.1kHz 16-bit mono)
             # 44100 Hz * 2 bytes/sample = 88200 bytes/sec
             # 8192 bytes / 88200 bytes/sec ~= 0.092 seconds (92ms)
