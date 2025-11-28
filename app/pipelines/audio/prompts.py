@@ -46,6 +46,7 @@ def build_llm_request(
     intent: str,
     frequency: str,
     frequency_group: str,
+    difficulty: int = 5,
 ):
     """Assemble prompts and metadata for the LLM invocation."""
 
@@ -56,6 +57,7 @@ def build_llm_request(
         phase_name=phase.get("name") if isinstance(phase, Mapping) else None,
         controller_role=_extract_controller_role(phase),
         recent_turns=context.get("recent_turns"),
+        difficulty=difficulty,
     )
 
     prompt_bundle = build_prompt(

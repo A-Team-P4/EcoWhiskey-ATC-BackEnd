@@ -62,6 +62,7 @@ async def analyze_audio(
     db_session: SessionDep,
     session_id: UUID = _SESSION_ID_FORM,
     frequency: str = _FREQUENCY_FORM,
+    difficulty: int = Form(5),
     audio_file: UploadFile = _AUDIO_FILE_UPLOAD,
 ) -> dict[str, Any]:
     """Transcribe an uploaded MP3 or M4A file and generate a Polly readback."""
@@ -207,6 +208,7 @@ async def analyze_audio(
                 intent=phase_intent,
                 frequency=frequency,
                 frequency_group=active_group,
+                difficulty=difficulty,
             )
             llm_outcome = await call_conversation_llm(request)
             structured = llm_outcome.response
