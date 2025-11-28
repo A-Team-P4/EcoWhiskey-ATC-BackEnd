@@ -8,6 +8,7 @@ from sqlalchemy import delete, select
 from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.phase_score import PhaseScore
 from app.models.training_context import TrainingContext
+from app.models.user import AccountType, User as UserModel
 from app.views.training_context import (
     LastControllerTurnResponse,
     TrainingContextHistoryItem,
@@ -16,6 +17,43 @@ from app.views.training_context import (
 )
 
 router = APIRouter(prefix="/training_context", tags=["training_context"])
+
+
+async def _ensure_can_view_user_training(
+    session: SessionDep,
+    target_user_id: int,
+    current_user: CurrentUserDep,
+) -> UserModel:
+    """Validate that the requester can read training data for the target user."""
+
+    result = await session.execute(select(UserModel).where(UserModel.id == target_user_id))
+    target_user = result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if target_user.id == current_user.id:
+        return target_user
+
+    if current_user.account_type != AccountType.INSTRUCTOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to view this training data",
+        )
+    if not current_user.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Assign an academy to your profile first",
+        )
+    if target_user.school_id != current_user.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view students from your academy",
+        )
+
+    return target_user
 
 
 @router.post(
@@ -64,11 +102,7 @@ async def get_training_history(
     Only extracts scenario_id from the context JSONB for efficiency.
     """
 
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access to requested user history is forbidden",
-        )
+    await _ensure_can_view_user_training(session, user_id, current_user)
 
     result = await session.execute(
         select(
@@ -126,11 +160,11 @@ async def get_last_controller_turn(
             detail="Training session not found",
         )
 
-    if training_context.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access to this training session is forbidden",
-        )
+    await _ensure_can_view_user_training(
+        session,
+        training_context.user_id,
+        current_user,
+    )
 
     context = training_context.context
     turns = context.get("turns", [])
