@@ -26,9 +26,9 @@
       "llm": {
         "role": "COCO Aproximación recibe al tráfico. Responde: '[Matrícula], recibido, descenso autorizado a cinco mil pies. Reporte Tres Ríos con Pavas a la vista.'",
         "studentChecklist": [
-          "Reportar abandono de Zona ECO.",
-          "Reportar descenso y altitud.",
-          "Reportar destino (Pavas)."
+          "Colacionar descenso asignado.",
+          "Colacionar reporte solicitado ('reportaré Tres Ríos').",
+          "NO colacionar tráfico irrelevante."
         ],
         "controllerChecklist": [
           "Autorizar descenso (descenso autorizado a cinco mil pies).",
@@ -40,7 +40,7 @@
         "feedbackGuidance": [
           "Indicar elementos faltantes en el reporte."
         ],
-        "notes": "Mantén ritmo radar estándar. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Mantén ritmo radar estándar. Colacionar descenso y reportes. NO colacionar indicaciones de tráfico si no afectan. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "COCO Aproximación",
@@ -87,9 +87,11 @@
       "llm": {
         "role": "De vuelta en Pavas Torre. Responde: '[Matrícula], incorpórese circuito derecho pista [data.runway_human]. QNH [data.qnh]. Viento [data.wind_direction] grados [data.wind_speed] nudos. Reporte final Palomas.'",
         "studentChecklist": [
-          "Reportar posición (ej. Tres Ríos) y altitud.",
-          "Confirmar instrucción de circuito.",
-          "Colacionar QNH."
+          "Colacionar circuito asignado (derecho/izquierdo).",
+          "Colacionar pista.",
+          "Colacionar QNH.",
+          "Colacionar reporte solicitado.",
+          "NO colacionar viento."
         ],
         "controllerChecklist": [
           "Asignar circuito (derecho pista [data.runway_human]).",
@@ -103,7 +105,7 @@
         "feedbackGuidance": [
           "Resaltar si el alumno omitió intención o posición."
         ],
-        "notes": "Usa fraseología local (Palomas). Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Usa fraseología local. NO colacionar VIENTO ni intensidad de tráfico. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Torre",
@@ -153,7 +155,9 @@
       "llm": {
         "role": "Emitir la autorización de aterrizaje con viento. Responde: '[Matrícula], autorizado aterrizar pista [data.runway_human], viento [data.wind_direction] grados [data.wind_speed] nudos.'",
         "studentChecklist": [
-          "Solicitar o esperar autorización final."
+          "Colacionar 'Autorizado aterrizar'.",
+          "Colacionar pista.",
+          "NO colacionar viento."
         ],
         "controllerChecklist": [
           "Autorizar aterrizar pista [data.runway_human].",
@@ -165,7 +169,7 @@
         "feedbackGuidance": [
           "Refuerza fraseología correcta."
         ],
-        "notes": "Mantén respuesta concisa. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Mantén respuesta concisa. NO colacionar VIENTO, 'sin tránsito' ni clima. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Torre",
@@ -183,8 +187,10 @@
       "llm": {
         "role": "Eres Pavas Superficie (121.7). Tras la liberación de pista, asigna rodaje al hangar.",
         "studentChecklist": [
-          "Reportar pista libre.",
-          "Solicitar rodaje a hangar."
+          "Colacionar ruta completa de rodaje.",
+          "Colacionar hangar o destino.",
+          "Colacionar permanencia en frecuencia (si se indica).",
+          "NO colacionar viento."
         ],
         "controllerChecklist": [
           "Asignar ruta (Alfa 3 – Alfa – Alfa 2).",
@@ -196,7 +202,7 @@
         "feedbackGuidance": [
           "Apunta omisiones del alumno."
         ],
-        "notes": "Cierra la operación con indicación de mantener frecuencia. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Cierra la operación. Colacionar ruta completa y destino. NO colacionar viento ni observaciones. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Superficie",

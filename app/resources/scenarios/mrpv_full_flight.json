@@ -74,9 +74,9 @@
           "Colacionar QNH correctamente.",
           "Colacionar código transponder asignado.",
           "Colacionar ruta de rodaje completa asignada.",
-          "Confirmar pista en uso.",
-          "Uso correcto de fraseología ('Rodaré' vs 'Rodamos').",
-          "Evitar colaciones incompletas o erróneas."
+          "Colacionar pista asignada.",
+          "Colacionar restricciones (mantenga, espere).",
+          "NO colacionar viento, hora ni información general."
         ],
         "controllerChecklist": [
           "Confirmar colación o pedir corrección puntual.",
@@ -90,17 +90,16 @@
           "Lista los elementos faltantes.",
           "Refuerza cuando la colación es precisa ('Colación correcta.')."
         ],
-        "notes": "Evita repetir toda la autorización salvo que necesites corregir la colación. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Evita repetir toda la autorización salvo que necesites corregir la colación. NO se debe colacionar VIENTO, HORA, ATIS ni información no dirigida a la aeronave. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Superficie",
         "expected_items": [
-          "Pista en uso",
-          "Viento",
           "QNH",
           "Código transponder",
           "Ruta de rodaje exacta",
-          "Contacto Torre 118.3"
+          "Pista asignada",
+          "Restricciones (mantenga, espere)"
         ]
       }
     },
@@ -116,8 +115,9 @@
         "role": "Eres Pavas Torre (118.3). Cuando la aeronave se reporta lista, responde: '[Matrícula], mantenga fuera de pista, tránsito en final corto.'",
         "studentChecklist": [
           "Reportar punto de espera pista [data.runway_human].",
-          "Fraseología correcta: 'Listo para SALIDA' (NO 'despegue').",
-          "Evitar frases pasivas como 'Esperamos instrucciones'."
+          "Colacionar: 'Mantengo fuera de pista' o 'A posición y mantengo'.",
+          "Colacionar instrucciones condicionales (ej. 'detrás del tránsito').",
+          "NO colacionar viento ni tráfico general."
         ],
         "controllerChecklist": [
           "Instruir mantener fuera de pista por tránsito.",
@@ -129,7 +129,7 @@
         "feedbackGuidance": [
           "Si el alumno usa 'listo para despegar', corrígelo a 'listo para salida'."
         ],
-        "notes": "No autorices rodaje a pista todavía; solo confirma la espera. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "No autorices rodaje a pista todavía; solo confirma la espera. NO se colaciona VIENTO ni tráfico que no afecte directamente. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Torre",
@@ -177,9 +177,10 @@
       "llm": {
         "role": "Como Torre, clearance final: '[Matrícula], viento [data.wind_direction] grados [data.wind_speed] nudos, autorizado despegar pista [data.runway_human]. Mantenga rumbo de pista y notifique pasando cinco mil pies.'",
         "studentChecklist": [
+          "Colacionar 'AUTORIZADO DESPEGAR'.",
           "Colacionar pista asignada.",
-          "Colacionar autorización de despegue.",
-          "Colacionar instrucciones de ascenso y reporte."
+          "Colacionar restricciones (rumbo, altitud, reportes).",
+          "NO colacionar viento ni estado de la pista."
         ],
         "controllerChecklist": [
           "Dar viento (ver data).",
@@ -194,7 +195,7 @@
         "feedbackGuidance": [
           "Resalta fraseología correcta o faltante en el alumno."
         ],
-        "notes": "NUNCA digas 'Listo para despegue' (eso lo dice el piloto, y mal dicho si no es 'salida') ni 'Despegue aprobado'. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "NUNCA digas 'Listo para despegue'. NO se colaciona VIENTO, condiciones meteorológicas ni comentarios adicionales ('vía libre'). Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Torre",
@@ -281,10 +282,10 @@
       "llm": {
         "role": "Validas la colación del alumno tras las instrucciones radar.",
         "studentChecklist": [
-          "Repetir ascenso 7000 pies.",
-          "Confirmar QNH.",
-          "Mencionar reporte ingresando Zona ECO.",
-          "Cerrar con indicativo."
+          "Colacionar QNH.",
+          "Colacionar nueva altitud asignada.",
+          "Colacionar reportes solicitados.",
+          "NO colacionar viento ni información general."
         ],
         "controllerChecklist": [
           "Decir 'colación correcta' cuando corresponda.",
@@ -297,7 +298,7 @@
           "Anota elementos omitidos.",
           "Reforzar cuando es correcta."
         ],
-        "notes": "Mantén respuesta breve. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Mantén respuesta breve. NO se colaciona VIENTO ni información general de tráfico. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "COCO Aproximación"
@@ -344,10 +345,10 @@
       "llm": {
         "role": "Eres COCO Radio (126.8). Responde: '[Matrícula], Coco Radio, recibido. QNE dos nueve nueve dos. Sin tránsito reportado en Zona ECO. Notifique cada treinta minutos o cualquier cambio.'",
         "studentChecklist": [
-          "Reportar ingreso a Zona ECO.",
-          "Reportar nivel de vuelo actual.",
-          "Reportar tiempo estimado en la zona.",
-          "Evitar fraseología no estándar ('Vamos a estar...')."
+          "Colacionar QNE (si se asigna).",
+          "Colacionar frecuencia (si se asigna).",
+          "Colacionar requerimiento de reporte (cada 30 min).",
+          "NO colacionar 'Sin tránsito' ni clima."
         ],
         "controllerChecklist": [
           "Dar QNE (dos nueve nueve dos).",
@@ -360,7 +361,7 @@
         "feedbackGuidance": [
           "Señala si faltó el estimado o altitud."
         ],
-        "notes": "Mantén estilo radio (informativo). Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Mantén estilo radio. NO se colaciona 'Sin tránsito reportado', clima ni observaciones. Solo QNE y frecuencia si aplica. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "COCO Radio"
@@ -391,7 +392,7 @@
         "feedbackGuidance": [
           "Resaltar si el alumno olvidó incluir posición/altitud o destinatario."
         ],
-        "notes": "Recuerda que en UNICOM no hay respuesta del controlador. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "UNICOM es aire-aire, NO existe readback. Solo reportes. Mantén la respuesta breve, concisa y precisa."
       }
     },
     {
@@ -405,7 +406,8 @@
       "llm": {
         "role": "COCO Radio recibe notificación de salida. Responde: '[Matrícula], recibido, abandona Zona ECO. Contacte Coco Aproximación uno dos cero punto cinco. Feliz tarde.'",
         "studentChecklist": [
-          "Informar 'abandonando Zona ECO hacia Pavas'."
+          "Colacionar frecuencia de cambio ('uno dos cero punto cinco').",
+          "NO colacionar saludos ni información general."
         ],
         "controllerChecklist": [
           "Acusar recibo.",
@@ -417,7 +419,7 @@
         "feedbackGuidance": [
           "Si faltó dirección o altitud, mencionarlo."
         ],
-        "notes": "Mantén despedida cordial. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Mantén despedida cordial. Solo colacionar la frecuencia de cambio. NO colacionar 'Buen día' ni tránsito no solicitado. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "COCO Radio",
@@ -435,9 +437,9 @@
       "llm": {
         "role": "COCO Aproximación recibe al tráfico. Responde: '[Matrícula], recibido, descenso autorizado a cinco mil pies. Reporte Tres Ríos con Pavas a la vista.'",
         "studentChecklist": [
-          "Reportar abandono de Zona ECO.",
-          "Reportar descenso y altitud.",
-          "Reportar destino (Pavas)."
+          "Colacionar descenso asignado.",
+          "Colacionar reporte solicitado ('reportaré Tres Ríos').",
+          "NO colacionar tráfico irrelevante."
         ],
         "controllerChecklist": [
           "Autorizar descenso (descenso autorizado a cinco mil pies).",
@@ -449,7 +451,7 @@
         "feedbackGuidance": [
           "Indicar elementos faltantes en el reporte."
         ],
-        "notes": "Mantén ritmo radar estándar. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Mantén ritmo radar estándar. Colacionar descenso y reportes. NO colacionar indicaciones de tráfico si no afectan. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "COCO Aproximación",
@@ -496,9 +498,11 @@
       "llm": {
         "role": "De vuelta en Pavas Torre. Responde: '[Matrícula], incorpórese circuito derecho pista [data.runway_human]. QNH [data.qnh]. Viento [data.wind_direction] grados [data.wind_speed] nudos. Reporte final Palomas.'",
         "studentChecklist": [
-          "Reportar posición (ej. Tres Ríos) y altitud.",
-          "Confirmar instrucción de circuito.",
-          "Colacionar QNH."
+          "Colacionar circuito asignado (derecho/izquierdo).",
+          "Colacionar pista.",
+          "Colacionar QNH.",
+          "Colacionar reporte solicitado.",
+          "NO colacionar viento."
         ],
         "controllerChecklist": [
           "Asignar circuito (derecho pista [data.runway_human]).",
@@ -512,7 +516,7 @@
         "feedbackGuidance": [
           "Resaltar si el alumno omitió intención o posición."
         ],
-        "notes": "Usa fraseología local (Palomas). Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Usa fraseología local. NO colacionar VIENTO ni intensidad de tráfico. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Torre",
@@ -562,7 +566,9 @@
       "llm": {
         "role": "Emitir la autorización de aterrizaje con viento. Responde: '[Matrícula], autorizado aterrizar pista [data.runway_human], viento [data.wind_direction] grados [data.wind_speed] nudos.'",
         "studentChecklist": [
-          "Solicitar o esperar autorización final."
+          "Colacionar 'Autorizado aterrizar'.",
+          "Colacionar pista.",
+          "NO colacionar viento."
         ],
         "controllerChecklist": [
           "Autorizar aterrizar pista [data.runway_human].",
@@ -574,7 +580,7 @@
         "feedbackGuidance": [
           "Refuerza fraseología correcta."
         ],
-        "notes": "Mantén respuesta concisa. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Mantén respuesta concisa. NO colacionar VIENTO, 'sin tránsito' ni clima. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Torre",
@@ -592,8 +598,10 @@
       "llm": {
         "role": "Eres Pavas Superficie (121.7). Tras la liberación de pista, asigna rodaje al hangar.",
         "studentChecklist": [
-          "Reportar pista libre.",
-          "Solicitar rodaje a hangar."
+          "Colacionar ruta completa de rodaje.",
+          "Colacionar hangar o destino.",
+          "Colacionar permanencia en frecuencia (si se indica).",
+          "NO colacionar viento."
         ],
         "controllerChecklist": [
           "Asignar ruta (Alfa 3 – Alfa – Alfa 2).",
@@ -605,7 +613,7 @@
         "feedbackGuidance": [
           "Apunta omisiones del alumno."
         ],
-        "notes": "Cierra la operación con indicación de mantener frecuencia. Mantén la respuesta breve, concisa y precisa. Evita palabras innecesarias."
+        "notes": "Cierra la operación. Colacionar ruta completa y destino. NO colacionar viento ni observaciones. Mantén la respuesta breve, concisa y precisa."
       },
       "data": {
         "controller_callsign": "Pavas Superficie",

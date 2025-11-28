@@ -40,6 +40,7 @@ class PromptContext:
     phase_name: str | None = None
     controller_role: str | None = None
     recent_turns: Sequence[Mapping[str, object]] | None = None
+    difficulty: int = 5
 
 
 @dataclass(frozen=True)
@@ -133,6 +134,23 @@ def build_prompt(
     else:
         system_prompt += (
             " Debes evaluar transmisiones de entrenamiento ATC y proporcionar retroalimentación."
+        )
+
+    # Inject difficulty-based instructions
+    difficulty = context.difficulty if hasattr(context, "difficulty") else 5
+    if difficulty <= 3:
+        system_prompt += (
+            " Modo relajado: Sé flexible con la fraseología. Acepta variaciones informales siempre que la intención sea clara y segura. "
+            "No penalices errores menores."
+        )
+    elif difficulty <= 7:
+        system_prompt += (
+            " Modo normal: Balancea la precisión con la fluidez. Penaliza errores de seguridad o información crítica, "
+            "pero permite ligeras variaciones."
+        )
+    else:
+        system_prompt += (
+            " Modo estricto: Exige fraseología estándar perfecta. Penaliza cualquier desviación o error menor."
         )
 
     system_prompt += (

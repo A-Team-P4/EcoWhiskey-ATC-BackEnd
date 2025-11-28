@@ -83,19 +83,17 @@ class TranscribeService:
             # Chunk size: 4KB (approx 23ms at 44.1kHz 16-bit mono)
             # 44100 Hz * 2 bytes/sample = 88200 bytes/sec
             # 8192 bytes / 88200 bytes/sec ~= 0.092 seconds (92ms)
+        async def write_chunks():
+            # Chunk size: 8KB (approx 92ms at 44.1kHz 16-bit mono)
             chunk_size = 8192
-            bytes_per_sec = self._media_sample_rate_hz * 2  # 16-bit = 2 bytes
-            sleep_time = chunk_size / bytes_per_sec
             
-            logger.info(f"Starting stream. Total bytes: {len(pcm_data)}. Chunk size: {chunk_size}. Sleep: {sleep_time:.4f}s")
+            logger.info(f"Starting stream. Total bytes: {len(pcm_data)}. Chunk size: {chunk_size}. No throttling.")
             
             total_sent = 0
             for i in range(0, len(pcm_data), chunk_size):
                 chunk = pcm_data[i : i + chunk_size]
                 await stream.input_stream.send_audio_event(audio_chunk=chunk)
                 total_sent += len(chunk)
-                # Sleep to simulate real-time streaming
-                await asyncio.sleep(sleep_time)
                 
                 if i % (chunk_size * 50) == 0: # Log every ~50 chunks
                      logger.debug(f"Streamed {total_sent}/{len(pcm_data)} bytes")
