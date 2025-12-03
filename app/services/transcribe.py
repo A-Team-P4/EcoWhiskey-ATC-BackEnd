@@ -40,11 +40,13 @@ class TranscribeService:
         language_code: str = "es-US",
         media_sample_rate_hz: int = 44100,
         media_encoding: str = "pcm",
+        vocabulary_name: str | None = None,
     ) -> None:
         self._region = region
         self._language_code = language_code
         self._media_sample_rate_hz = media_sample_rate_hz
         self._media_encoding = media_encoding
+        self._vocabulary_name = vocabulary_name or settings.transcribe.vocabulary_name
         
         # Ensure credentials are available to the SDK
         if settings.s3.access_key:
@@ -75,14 +77,11 @@ class TranscribeService:
             language_code=self._language_code,
             media_sample_rate_hz=self._media_sample_rate_hz,
             media_encoding=self._media_encoding,
+            vocabulary_name=self._vocabulary_name,
         )
 
         handler = _SimpleTranscriptHandler(stream.output_stream)
 
-        async def write_chunks():
-            # Chunk size: 4KB (approx 23ms at 44.1kHz 16-bit mono)
-            # 44100 Hz * 2 bytes/sample = 88200 bytes/sec
-            # 8192 bytes / 88200 bytes/sec ~= 0.092 seconds (92ms)
         async def write_chunks():
             # Chunk size: 8KB (approx 92ms at 44.1kHz 16-bit mono)
             chunk_size = 8192

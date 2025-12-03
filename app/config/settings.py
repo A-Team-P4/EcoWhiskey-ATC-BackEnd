@@ -72,6 +72,24 @@ class PollyConfig(BaseSettings):
     )
 
 
+
+class TranscribeConfig(BaseSettings):
+    """Amazon Transcribe configuration."""
+
+    region: str = "us-east-1"
+    vocabulary_name: Optional[str] = Field(
+        default=None,
+        validation_alias="TRANSCRIBE_VOCABULARY_NAME",
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="TRANSCRIBE_",
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
 class BedrockConfig(BaseSettings):
     """Amazon Bedrock configuration."""
 
@@ -181,6 +199,9 @@ class Settings(BaseSettings):
 
     # Polly
     polly: PollyConfig = Field(default_factory=PollyConfig)
+
+    # Transcribe
+    transcribe: TranscribeConfig = Field(default_factory=TranscribeConfig)
 
     # Bedrock
     bedrock: BedrockConfig = Field(default_factory=BedrockConfig)
