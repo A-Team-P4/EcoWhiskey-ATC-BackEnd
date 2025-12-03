@@ -40,7 +40,7 @@ class PromptContext:
     phase_name: str | None = None
     controller_role: str | None = None
     recent_turns: Sequence[Mapping[str, object]] | None = None
-    difficulty: int = 5
+    difficulty: int = 2
 
 
 @dataclass(frozen=True)

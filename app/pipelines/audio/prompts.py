@@ -46,7 +46,7 @@ def build_llm_request(
     intent: str,
     frequency: str,
     frequency_group: str,
-    difficulty: int = 5,
+    difficulty: int = 2,
 ):
     """Assemble prompts and metadata for the LLM invocation."""
 
