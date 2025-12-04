@@ -16,6 +16,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
+from app.config.settings import settings
 from app.controllers.dependencies import CurrentUserDep, SessionDep
 from app.models.phase_score import PhaseScore
 from app.pipelines.audio import (
@@ -32,6 +33,7 @@ from app.pipelines.audio import (
     synthesize_controller_audio,
     transcribe_audio,
 )
+from app.pipelines.audio.cleaning import clean_transcription
 from app.services.context_repository import MAX_TURNS_STORED, append_turn
 from app.services.storage import upload_session_asset
 
@@ -87,6 +89,13 @@ async def analyze_audio(
     # Log both for observability and to capture audio transcripts in the dedicated logger.
     logger.info("Transcripción recibida session=%s: %s", session_id, transcript_text)
     transcript_logger.info("student | session=%s | frequency=%s | text=%s", session_id, frequency, transcript_text)
+
+    # Optional cleaning step
+    if settings.bedrock.cleaning_enabled:
+        cleaned_text = await clean_transcription(transcript_text)
+        if cleaned_text != transcript_text:
+            logger.info("Transcripción limpia session=%s: %s", session_id, cleaned_text)
+            transcript_text = cleaned_text
 
     raw_context = await fetch_session_context(session_id)
     session_context = dict(raw_context) if isinstance(raw_context, Mapping) else {}
