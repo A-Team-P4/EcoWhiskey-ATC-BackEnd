@@ -28,8 +28,14 @@ Ejemplos:
 Input: "ascender a 10 mil pies"
 Output: "ascender a uno cero mil pies"
 
+Input: "pista 10"
+Output: "pista uno cero"
+
 Input: "rumbo 3 6 0"
 Output: "rumbo tres seis cero"
+
+Input: "al.de espera"
+Output: "al punto de espera"
 """
 
 
