@@ -67,10 +67,12 @@ class BedrockLlmClient:
         max_tokens: int | None = None,
         temperature: float | None = None,
         top_p: float | None = None,
+        model_id: str | None = None,
     ) -> str | None:
         """Run a Bedrock `converse` call and return the aggregate text output."""
 
-        if not self._client or not self._model_id:
+        target_model_id = model_id or self._model_id
+        if not self._client or not target_model_id:
             return None
 
         inference_cfg = {
@@ -85,7 +87,7 @@ class BedrockLlmClient:
 
         def _call() -> str:
             response = self._client.converse(
-                modelId=self._model_id,
+                modelId=target_model_id,
                 system=[{"text": system_prompt}],
                 messages=[{"role": "user", "content": [{"text": user_prompt}]}],
                 inferenceConfig=inference_cfg,

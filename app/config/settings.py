@@ -106,6 +106,20 @@ class BedrockConfig(BaseSettings):
         validation_alias="BEDROCK_API_KEY",
     )
 
+    # Cleaning step configuration
+    cleaning_enabled: bool = Field(
+        default=True,
+        validation_alias="BEDROCK_CLEANING_ENABLED",
+    )
+    cleaning_model_id: str = Field(
+        default="amazon.nova-micro-v1:0",
+        validation_alias="BEDROCK_CLEANING_MODEL_ID",
+    )
+    cleaning_max_tokens: int = Field(
+        default=200,
+        validation_alias="BEDROCK_CLEANING_MAX_TOKENS",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         secrets_dir=".secrets",
