@@ -112,7 +112,7 @@ class BedrockConfig(BaseSettings):
         validation_alias="BEDROCK_CLEANING_ENABLED",
     )
     cleaning_model_id: str = Field(
-        default="us.amazon.nova-micro-v1:0",
+        default="amazon.nova-micro-v1:0",
         validation_alias="BEDROCK_CLEANING_MODEL_ID",
     )
     cleaning_max_tokens: int = Field(
